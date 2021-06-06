@@ -1,4 +1,6 @@
 # MiniSQL
+## Include
+## API
 ## BufferManager
 ### 数据文件定义
 每个文件块大小默认（最小）为4096字节，支持最大65536字节的块大小  
@@ -30,3 +32,8 @@ Catalog数据文件：
 允许用户利用6字节地址将相应块固定在缓冲区中直到用户手动解除固定  
 允许用户利用8字节地址得到相应缓冲区偏移位置的内存地址
 允许用户利用8字节地址删除以该地址为首的记录且将其标记为空余
+
+## CatalogManager
+## IndexManager
+## Interpreter
+## RecordManager
