@@ -18,7 +18,7 @@
 
 Catalog数据文件：  
 * 整个数据库共用一个文件
-* 文件地址固定为0，文件名固定为Catalog，文件内容由CatalogManager决定
+* 文件名期望为Catalog，由CatalogManager初始化时打开，文件编号为0，文件内容由CatalogManager决定
 
 ### 文件虚拟地址定义
 地址共64位，按高位至低位划分为16位文件寻址，32位块寻址，16位块偏移地址  
