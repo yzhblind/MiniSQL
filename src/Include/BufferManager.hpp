@@ -8,6 +8,9 @@
 #include <algorithm>
 #include <unordered_map>
 
+#define SUCCESS 0
+#define FAILURE -1
+
 typedef unsigned short int hword;
 typedef unsigned int word;
 typedef unsigned long long dword;
@@ -15,7 +18,8 @@ typedef unsigned long long dword;
 enum fileType
 {
     DATA,
-    OTHERS
+    INDEX,
+    CATALOG
 };
 
 enum pinType
@@ -44,6 +48,7 @@ private:
     {
         std::vector<FILE *> pointer;
         std::vector<fileType> type;
+        //recordSize stores root block address if file type is INDEX
         std::vector<int> blockNum, recordSize, nextFree;
         std::vector<bool> valid;
         std::list<hword> freelist;
@@ -60,7 +65,7 @@ private:
 public:
     BufferManager();
     ~BufferManager();
-    int openFile(const std::string filename, const fileType type);
+    int openFile(const std::string filename, const fileType type, const int recordSize = 0);
     int removeFile(const hword fileAddr);
     node getNextFree(const hword fileAddr);
     node getRootBlock(const hword fileAddr);

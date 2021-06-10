@@ -44,7 +44,14 @@ int BufferManager::movBlock2Buffer(const hword fileAddr, const word blockAddr)
         buf.tagIndex[tag] = index;
         FILE *fp = file.pointer[fileAddr];
         fseeko64(fp, blockAddr * pageSize, SEEK_SET);
-        fread(buf.pool[index], 4096, 1, fp);
+        if (blockAddr < file.blockNum[fileAddr])
+            fread(buf.pool[index], 4096, 1, fp);
+        else
+        {
+            file.blockNum[fileAddr] = blockAddr + 1;
+            memset(buf.pool[index], 0, pageSize);
+            fwrite(buf.pool[index], 4096, 1, fp);
+        }
         buf.LRU.splice(buf.LRU.begin(), buf.LRU, buf.LRUIndex[index]);
         return index;
     }
@@ -76,10 +83,13 @@ BufferManager::BufferManager()
 }
 BufferManager::~BufferManager()
 {
+    //TODO
 }
 int BufferManager::resize()
 {
     bufferSize *= 2;
+    if (bufferSize >= 1024 * 1024)
+        return FAILURE;
     buf.valid.resize(bufferSize, false);
     buf.dirty.resize(bufferSize, false);
     buf.pinned.resize(bufferSize, 0);
@@ -91,44 +101,85 @@ int BufferManager::resize()
         buf.LRU.push_front(i);
         buf.LRUIndex.push_back(buf.LRU.begin());
     }
+    return SUCCESS;
 }
-int BufferManager::openFile(const std::string filename, const fileType type)
+int BufferManager::openFile(const std::string filename, const fileType type, const int recordSize = 0)
 {
+    bool newFileFlag = false;
     FILE *fp = fopen64(filename.c_str(), "rb+");
     if (fp == NULL)
+    {
         fp = fopen64(filename.c_str(), "wb+");
-    if (fp == NULL)
-        return -1;
-    int fileAddr=file.pointer.size();
-    file.pointer.push_back(fp);
-    
+        newFileFlag = true;
+    }
+    if (fp == NULL || (newFileFlag == true && recordSize == 0 && type == DATA))
+        return FAILURE;
+    int fileAddr;
+    if (file.freelist.empty())
+    {
+        fileAddr = file.pointer.size();
+        file.pointer.push_back(fp);
+        file.type.push_back(type);
+        file.valid.push_back(true);
+        file.blockNum.push_back(newFileFlag ? 0 : 1);
+        file.recordSize.push_back(recordSize + 1);
+        file.nextFree.push_back(0);
+    }
+    else
+    {
+        fileAddr = *file.freelist.rbegin();
+        file.freelist.pop_back();
+        file.pointer[fileAddr] = fp;
+        file.type[fileAddr] = type;
+        file.valid[fileAddr] = true;
+        file.blockNum[fileAddr] = newFileFlag ? 0 : 1;
+        file.recordSize[fileAddr] = recordSize + 1;
+        file.nextFree[fileAddr] = 0;
+    }
+    int index = movBlock2Buffer(fileAddr, 0);
+    if (!newFileFlag)
+    {
+        int *meta = static_cast<int *>(buf.pool[index]);
+        file.blockNum[fileAddr] = meta[0];
+        file.recordSize[fileAddr] = meta[1];
+        file.nextFree[fileAddr] = meta[2];
+    }
 }
 int BufferManager::removeFile(const hword fileAddr)
 {
+    
 }
 node BufferManager::getNextFree(const hword fileAddr)
 {
+    //TODO
 }
 node BufferManager::getRootBlock(const hword fileAddr)
 {
+    //TODO
 }
 node BufferManager::setRootBlock(const hword fileAddr, const word blockAddr)
 {
+    //TODO
 }
 node BufferManager::getBlock(const hword fileAddr, const word blockAddr)
 {
+    //TODO
 }
 int BufferManager::setDirty(const hword fileAddr, const word blockAddr)
 {
+    //TODO
 }
 int BufferManager::deleteBlock(const hword fileAddr, const word blockAddr)
 {
+    //TODO
 }
 int BufferManager::pinBlock(const hword fileAddr, const word blockAddr, const pinType type)
 {
+    //TODO
 }
 int BufferManager::deleteRecord(const hword fileAddr, const word blockAddr, const hword offset)
 {
+    //TODO
 }
 bool BufferManager::checkNodeValid(const node &x) const
 {
@@ -143,17 +194,17 @@ bool BufferManager::checkNodeValid(const node &x) const
 int node::read(void *const dest, const int offset, const int byteSize) const
 {
     if (offset + byteSize > size || offset < 0 || byteSize <= 0)
-        return -1;
+        return FAILURE;
     memcpy(dest, static_cast<char *>(phyAddr) + offset, byteSize);
-    return 0;
+    return SUCCESS;
 }
 int node::write(const void *const src, const int offset, const int byteSize)
 {
     if (offset + byteSize > size || offset < 0 || byteSize <= 0)
-        return -1;
+        return FAILURE;
     origin.setDirty(extractFileAddr(virtAddr), extractBlockAddr(virtAddr));
     memcpy(static_cast<char *>(phyAddr) + offset, src, byteSize);
-    return 0;
+    return SUCCESS;
 }
 
 BufferManager bufMgr;
