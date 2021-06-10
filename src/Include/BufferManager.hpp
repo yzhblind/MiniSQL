@@ -58,7 +58,9 @@ private:
     fileIndex file;
     static long long bufferSize;
     static const long long pageSize;
+    void bufferAdjust();
     int resize();
+    void writeMetaData(const hword fileAddr);
     int writeBlock2Buffer(buffer &buf, fileIndex &file, const int bufID);
     int movBlock2Buffer(const hword fileAddr, const word blockAddr);
 

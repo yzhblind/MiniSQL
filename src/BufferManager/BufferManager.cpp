@@ -17,6 +17,8 @@ int BufferManager::writeBlock2Buffer(buffer &buf, fileIndex &file, const int buf
 }
 int BufferManager::movBlock2Buffer(const hword fileAddr, const word blockAddr)
 {
+    if (fileAddr >= file.pointer.size())
+        return FAILURE;
     dword tag = combileVirtAddr(fileAddr, blockAddr, 0);
     auto iter = buf.tagIndex.find(tag);
     if (iter != buf.tagIndex.end())
@@ -56,14 +58,25 @@ int BufferManager::movBlock2Buffer(const hword fileAddr, const word blockAddr)
         return index;
     }
 }
-
-BufferManager::BufferManager()
+void BufferManager::writeMetaData(const hword fileAddr)
+{
+    int index = movBlock2Buffer(fileAddr, 0);
+    int *meta = static_cast<int *>(buf.pool[index]);
+    meta[0] = file.blockNum[fileAddr];
+    meta[1] = file.recordSize[fileAddr];
+    meta[2] = file.nextFree[fileAddr];
+    buf.dirty[index] = true;
+}
+void BufferManager::bufferAdjust()
 {
     buf.valid.resize(bufferSize, false);
     buf.dirty.resize(bufferSize, false);
     buf.pinned.resize(bufferSize, 0);
     buf.tag.resize(bufferSize, 0);
-    buf.tagIndex.clear();
+}
+BufferManager::BufferManager()
+{
+    bufferAdjust();
     for (int i = 0; i < bufferSize; ++i)
         buf.pool.push_back(new char[pageSize]);
     for (int i = 0; i < bufferSize; ++i)
@@ -71,18 +84,12 @@ BufferManager::BufferManager()
         buf.LRU.push_front(i);
         buf.LRUIndex.push_back(buf.LRU.begin());
     }
-    buf.fixed.clear();
-
-    file.pointer.clear();
-    file.type.clear();
-    file.blockNum.clear();
-    file.recordSize.clear();
-    file.nextFree.clear();
-    file.valid.clear();
-    file.freelist.clear();
 }
 BufferManager::~BufferManager()
 {
+    for (int i = 0; i < file.pointer.size(); ++i)
+        if (file.valid[i] == true)
+            writeMetaData(i);
     //TODO
 }
 int BufferManager::resize()
@@ -90,10 +97,7 @@ int BufferManager::resize()
     bufferSize *= 2;
     if (bufferSize >= 1024 * 1024)
         return FAILURE;
-    buf.valid.resize(bufferSize, false);
-    buf.dirty.resize(bufferSize, false);
-    buf.pinned.resize(bufferSize, 0);
-    buf.tag.resize(bufferSize, 0);
+    bufferAdjust();
     for (int i = bufferSize / 2; i < bufferSize; ++i)
         buf.pool.push_back(new char[pageSize]);
     for (int i = bufferSize / 2; i < bufferSize; ++i)
@@ -103,7 +107,7 @@ int BufferManager::resize()
     }
     return SUCCESS;
 }
-int BufferManager::openFile(const std::string filename, const fileType type, const int recordSize = 0)
+int BufferManager::openFile(const std::string filename, const fileType type, const int recordSize)
 {
     bool newFileFlag = false;
     FILE *fp = fopen64(filename.c_str(), "rb+");
@@ -147,7 +151,22 @@ int BufferManager::openFile(const std::string filename, const fileType type, con
 }
 int BufferManager::removeFile(const hword fileAddr)
 {
-    
+    if (fileAddr >= file.pointer.size() || file.valid[fileAddr] == false)
+        return FAILURE;
+    writeMetaData(fileAddr);
+    for (int i = 0; i < bufferSize; ++i)
+        if (extractFileAddr(buf.tag[i]) == fileAddr && buf.valid[i] == true)
+        {
+            if (buf.dirty[i] == true)
+                writeBlock2Buffer(buf, file, i);
+            buf.valid[i] = false;
+            if (buf.pinned[i] > 0)
+                buf.LRU.splice(buf.LRU.end(), buf.fixed, buf.LRUIndex[i]);
+            else
+                buf.LRU.splice(buf.LRU.end(), buf.LRU, buf.LRUIndex[i]);
+        }
+    file.valid[fileAddr] = false;
+    file.freelist.push_front(fileAddr);
 }
 node BufferManager::getNextFree(const hword fileAddr)
 {
