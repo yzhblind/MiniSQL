@@ -9,7 +9,7 @@ static inline dword combileVirtAddr(hword fileAddr, word blockAddr, hword offset
 const long long BufferManager::pageSize = 4096;
 long long BufferManager::bufferSize = 1024;
 
-int BufferManager::writeBlock2Buffer(buffer &buf, fileIndex &file, const int bufID)
+int BufferManager::writeBlock2File(const int bufID)
 {
     FILE *fp = file.pointer[extractFileAddr(buf.tag[bufID])];
     fseeko64(fp, extractBlockAddr(buf.tag[bufID]) * pageSize, SEEK_SET);
@@ -36,7 +36,7 @@ int BufferManager::movBlock2Buffer(const hword fileAddr, const word blockAddr)
         if (buf.valid[index] == true)
         {
             if (buf.dirty[index] == true)
-                writeBlock2Buffer(buf, file, index);
+                writeBlock2File(index);
             buf.tagIndex.erase(buf.tag[index]);
         }
         buf.valid[index] = true;
@@ -58,7 +58,7 @@ int BufferManager::movBlock2Buffer(const hword fileAddr, const word blockAddr)
         return index;
     }
 }
-void BufferManager::writeMetaData(const hword fileAddr)
+int BufferManager::writeMetaData(const hword fileAddr)
 {
     int index = movBlock2Buffer(fileAddr, 0);
     int *meta = static_cast<int *>(buf.pool[index]);
@@ -66,6 +66,7 @@ void BufferManager::writeMetaData(const hword fileAddr)
     meta[1] = file.recordSize[fileAddr];
     meta[2] = file.nextFree[fileAddr];
     buf.dirty[index] = true;
+    return index;
 }
 void BufferManager::bufferAdjust()
 {
@@ -90,7 +91,11 @@ BufferManager::~BufferManager()
     for (int i = 0; i < file.pointer.size(); ++i)
         if (file.valid[i] == true)
             writeMetaData(i);
-    //TODO
+    for (int i = 0; i < bufferSize; ++i)
+        if (buf.valid[i] == true && buf.dirty[i] == true)
+            writeBlock2File(i);
+    for (int i = 0; i < bufferSize; ++i)
+        delete[] buf.pool[i];
 }
 int BufferManager::resize()
 {
@@ -107,6 +112,29 @@ int BufferManager::resize()
     }
     return SUCCESS;
 }
+int BufferManager::newDataBlock(const hword fileAddr)
+{
+    int index = movBlock2Buffer(fileAddr, file.blockNum[fileAddr]);
+    buf.dirty[index] = true;
+    char *base = static_cast<char *>(buf.pool[index]);
+    hword *pHword;
+    word *pWord;
+    pWord = reinterpret_cast<word *>(base);
+    *pWord = file.nextFree[fileAddr];
+    file.nextFree[fileAddr] = file.blockNum[fileAddr] - 1;
+    pHword = reinterpret_cast<hword *>(base + 4);
+    *pHword = 6;
+    int recordNumber = (pageSize - 6) / file.recordSize[fileAddr];
+    int maxOffset = 6 + (recordNumber - 1) * file.recordSize[fileAddr];
+    for (int offset = 6; offset <= maxOffset; offset += file.recordSize[fileAddr])
+    {
+        pHword = reinterpret_cast<hword *>(base + offset + 1);
+        *pHword = offset + file.recordSize[fileAddr];
+    }
+    pHword = reinterpret_cast<hword *>(base + maxOffset + 1);
+    *pHword = 0;
+    return index;
+}
 int BufferManager::openFile(const std::string filename, const fileType type, const int recordSize)
 {
     bool newFileFlag = false;
@@ -116,7 +144,7 @@ int BufferManager::openFile(const std::string filename, const fileType type, con
         fp = fopen64(filename.c_str(), "wb+");
         newFileFlag = true;
     }
-    if (fp == NULL || (newFileFlag == true && recordSize == 0 && type == DATA))
+    if (fp == NULL || (newFileFlag == true && recordSize <= 1 && type == DATA))
         return FAILURE;
     int fileAddr;
     if (file.freelist.empty())
@@ -158,7 +186,7 @@ int BufferManager::removeFile(const hword fileAddr)
         if (extractFileAddr(buf.tag[i]) == fileAddr && buf.valid[i] == true)
         {
             if (buf.dirty[i] == true)
-                writeBlock2Buffer(buf, file, i);
+                writeBlock2File(i);
             buf.valid[i] = false;
             if (buf.pinned[i] > 0)
                 buf.LRU.splice(buf.LRU.end(), buf.fixed, buf.LRUIndex[i]);
@@ -170,7 +198,54 @@ int BufferManager::removeFile(const hword fileAddr)
 }
 node BufferManager::getNextFree(const hword fileAddr)
 {
-    //TODO
+    if (file.valid[fileAddr] == false)
+        return node(*this, 0, NULL, -1, 0);
+    int index, blockAddr, offset, *metaBlock;
+    hword *metaOffset, *p;
+    FILE *fp = file.pointer[fileAddr];
+    switch (file.type[fileAddr])
+    {
+    case DATA:
+        if (file.nextFree[fileAddr] == 0)
+            index = newDataBlock(fileAddr);
+        blockAddr = file.nextFree[fileAddr];
+        metaOffset = static_cast<hword *>(buf.pool[index]) + 2;
+        offset = *metaOffset;
+        p = reinterpret_cast<hword *>(static_cast<char *>(buf.pool[index]) + offset + 1);
+        *metaOffset = *p;
+        if (*metaOffset == 0)
+        {
+            metaBlock = static_cast<int *>(buf.pool[index]);
+            file.nextFree[fileAddr] = *metaBlock;
+            *metaBlock = 0;
+        }
+        return node(*this, combileVirtAddr(fileAddr, blockAddr, 0), static_cast<char *>(buf.pool[index]) + offset, index, file.recordSize[fileAddr]);
+        break;
+
+    case INDEX:
+        if (file.nextFree[fileAddr] == 0)
+        {
+            index = movBlock2Buffer(fileAddr, file.blockNum[fileAddr]);
+            blockAddr = file.blockNum[fileAddr] - 1;
+        }
+        else
+        {
+            index = movBlock2Buffer(fileAddr, file.nextFree[fileAddr]);
+            metaBlock = static_cast<int *>(buf.pool[index]);
+            blockAddr = file.nextFree[fileAddr];
+            file.nextFree[fileAddr] = *metaBlock;
+        }
+        return node(*this, combileVirtAddr(fileAddr, blockAddr, 0), buf.pool[index], index, pageSize);
+        break;
+
+    case CATALOG:
+        index = movBlock2Buffer(fileAddr, file.blockNum[fileAddr]);
+        return node(*this, combileVirtAddr(fileAddr, file.blockNum[fileAddr] - 1, 0), buf.pool[index], index, pageSize);
+        break;
+
+    default:
+        return node(*this, 0, NULL, -1, 0);
+    }
 }
 node BufferManager::getRootBlock(const hword fileAddr)
 {

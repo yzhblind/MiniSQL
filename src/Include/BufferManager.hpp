@@ -48,7 +48,7 @@ private:
     {
         std::vector<FILE *> pointer;
         std::vector<fileType> type;
-        //recordSize stores root block address if file type is INDEX
+        //对INDEX文件，recordSize将存储其根节点块地址
         std::vector<int> blockNum, recordSize, nextFree;
         std::vector<bool> valid;
         std::list<hword> freelist;
@@ -60,8 +60,9 @@ private:
     static const long long pageSize;
     void bufferAdjust();
     int resize();
-    void writeMetaData(const hword fileAddr);
-    int writeBlock2Buffer(buffer &buf, fileIndex &file, const int bufID);
+    int newDataBlock(const hword fileAddr);
+    int writeMetaData(const hword fileAddr);
+    int writeBlock2File(const int bufID);
     int movBlock2Buffer(const hword fileAddr, const word blockAddr);
 
 public:
