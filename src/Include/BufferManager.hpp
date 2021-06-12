@@ -58,6 +58,8 @@ private:
     fileIndex file;
     static long long bufferSize;
     static const long long pageSize;
+    inline bool notValidAddr(const hword fileAddr) const { return fileAddr >= file.pointer.size() || file.valid[fileAddr] == false; }
+    inline bool notValidAddr(const hword fileAddr, const word blockAddr) const { return blockAddr == 0 || blockAddr >= file.blockNum[fileAddr]; }
     void bufferAdjust();
     int resize();
     int newDataBlock(const hword fileAddr);
@@ -72,7 +74,7 @@ public:
     int removeFile(const hword fileAddr);
     node getNextFree(const hword fileAddr);
     node getRootBlock(const hword fileAddr);
-    node setRootBlock(const hword fileAddr, const word blockAddr);
+    int setRootBlock(const hword fileAddr, const word blockAddr);
     node getBlock(const hword fileAddr, const word blockAddr);
     int setDirty(const hword fileAddr, const word blockAddr);
     int deleteBlock(const hword fileAddr, const word blockAddr);
@@ -90,7 +92,7 @@ private:
     int bufID, size;
 
 public:
-    node(BufferManager &origin, dword virtAddr, void *phyAddr, int bufferID, int size) : origin(origin), virtAddr(virtAddr), phyAddr(phyAddr), size(size){};
+    node(BufferManager &origin, dword virtAddr = 0, void *phyAddr = NULL, int bufferID = -1, int size = 0) : origin(origin), virtAddr(virtAddr), phyAddr(phyAddr), size(size){};
     inline hword getFileAddr() const { return virtAddr >> 48; }
     inline hword getOffset() const { return virtAddr & 0xFFFF; }
     inline word getBlockAddr() const { return (virtAddr >> 16) & 0xFFFFFFFF; }
