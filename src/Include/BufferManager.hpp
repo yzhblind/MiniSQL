@@ -79,6 +79,7 @@ public:
     int setDirty(const hword fileAddr, const word blockAddr);
     int deleteBlock(const hword fileAddr, const word blockAddr);
     int pinBlock(const hword fileAddr, const word blockAddr, const pinType type);
+    node getRecord(const hword fileAddr, const word blockAddr, const hword offset);
     int deleteRecord(const hword fileAddr, const word blockAddr, const hword offset);
     bool checkNodeValid(const node &x) const;
 };
