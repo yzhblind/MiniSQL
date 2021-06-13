@@ -295,10 +295,10 @@ int BufferManager::deleteBlock(const hword fileAddr, const word blockAddr)
 }
 int BufferManager::pinBlock(const hword fileAddr, const word blockAddr, const pinType type)
 {
-    auto iter = buf.tagIndex.find(combileVirtAddr(fileAddr, blockAddr, 0));
-    if (iter == buf.tagIndex.end())
+    if (notValidAddr(fileAddr) || notValidAddr(fileAddr, blockAddr))
         return FAILURE;
-    int index = iter->second;
+    auto iter = buf.tagIndex.find(combileVirtAddr(fileAddr, blockAddr, 0));
+    int index = (iter == buf.tagIndex.end()) ? movBlock2Buffer(fileAddr, blockAddr) : iter->second;
     switch (type)
     {
     case PIN:
