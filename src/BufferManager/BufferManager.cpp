@@ -195,7 +195,7 @@ int BufferManager::removeFile(const hword fileAddr)
         }
     file.valid[fileAddr] = false;
     file.freelist.push_front(fileAddr);
-    return 0;
+    return SUCCESS;
 }
 node BufferManager::getNextFree(const hword fileAddr)
 {
@@ -264,7 +264,7 @@ int BufferManager::setRootBlock(const hword fileAddr, const word blockAddr)
     if (notValidAddr(fileAddr) || notValidAddr(fileAddr, blockAddr))
         return FAILURE;
     file.recordSize[fileAddr] = blockAddr;
-    return 0;
+    return SUCCESS;
 }
 node BufferManager::getBlock(const hword fileAddr, const word blockAddr)
 {
@@ -280,7 +280,7 @@ int BufferManager::setDirty(const hword fileAddr, const word blockAddr)
     if (iter == buf.tagIndex.end())
         return FAILURE;
     buf.dirty[iter->second] = true;
-    return 0;
+    return SUCCESS;
 }
 int BufferManager::deleteBlock(const hword fileAddr, const word blockAddr)
 {
@@ -291,7 +291,7 @@ int BufferManager::deleteBlock(const hword fileAddr, const word blockAddr)
     int *meta = static_cast<int *>(buf.pool[index]);
     *meta = file.nextFree[fileAddr];
     file.nextFree[fileAddr] = blockAddr;
-    return 0;
+    return SUCCESS;
 }
 int BufferManager::pinBlock(const hword fileAddr, const word blockAddr, const pinType type)
 {
@@ -316,7 +316,7 @@ int BufferManager::pinBlock(const hword fileAddr, const word blockAddr, const pi
     default:
         return FAILURE;
     }
-    return 0;
+    return SUCCESS;
 }
 int BufferManager::deleteRecord(const hword fileAddr, const word blockAddr, const hword offset)
 {
@@ -338,7 +338,7 @@ int BufferManager::deleteRecord(const hword fileAddr, const word blockAddr, cons
         *metaBlock = file.nextFree[fileAddr];
         file.nextFree[fileAddr] = blockAddr;
     }
-    return 0;
+    return SUCCESS;
 }
 bool BufferManager::checkNodeValid(const node &x) const
 {
