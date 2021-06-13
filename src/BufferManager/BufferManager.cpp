@@ -5,8 +5,8 @@ static inline hword extractFileAddr(dword virtAddr) { return virtAddr >> 48; }
 static inline hword extractOffset(dword virtAddr) { return virtAddr & 0xFFFF; }
 static inline word extractBlockAddr(dword virtAddr) { return (virtAddr >> 16) & 0xFFFFFFFF; }
 static inline dword combileVirtAddr(hword fileAddr, word blockAddr, hword offset) { return (static_cast<dword>(fileAddr) << 48) | (static_cast<dword>(blockAddr) << 16) | static_cast<dword>(offset); }
-const long long BufferManager::pageSize = 32;
-long long BufferManager::bufferSize = 8;
+const long long BufferManager::pageSize = 4096;
+long long BufferManager::bufferSize = 1024;
 
 int BufferManager::writeBlock2File(const int bufID)
 {
