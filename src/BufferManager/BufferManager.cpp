@@ -29,7 +29,7 @@ int BufferManager::movBlock2Buffer(const hword fileAddr, const word blockAddr)
     }
     else
     {
-        if (buf.LRU.empty())
+        if (buf.LRU.size() < bufferSize / 2)
             resize();
         int index = *buf.LRU.rbegin();
         if (buf.valid[index] == true)
@@ -177,7 +177,7 @@ int BufferManager::openFile(const std::string filename, const fileType type, con
     }
     return fileAddr;
 }
-int BufferManager::removeFile(const hword fileAddr)
+int BufferManager::removeFile(const hword fileAddr, const std::string filename)
 {
     if (notValidAddr(fileAddr))
         return FAILURE;
@@ -195,7 +195,7 @@ int BufferManager::removeFile(const hword fileAddr)
         }
     file.valid[fileAddr] = false;
     file.freelist.push_front(fileAddr);
-    return SUCCESS;
+    return remove(filename.c_str()) ? FAILURE : SUCCESS;
 }
 node BufferManager::getNextFree(const hword fileAddr)
 {
@@ -229,23 +229,19 @@ node BufferManager::getNextFree(const hword fileAddr)
 
     case INDEX:
         if (file.nextFree[fileAddr] == 0)
-        {
-            index = movBlock2Buffer(fileAddr, file.blockNum[fileAddr]);
-            blockAddr = file.blockNum[fileAddr] - 1;
-        }
+            index = movBlock2Buffer(fileAddr, (blockAddr = file.blockNum[fileAddr]));
         else
         {
-            index = movBlock2Buffer(fileAddr, file.nextFree[fileAddr]);
+            index = movBlock2Buffer(fileAddr, (blockAddr = file.nextFree[fileAddr]));
             metaBlock = static_cast<int *>(buf.pool[index]);
-            blockAddr = file.nextFree[fileAddr];
             file.nextFree[fileAddr] = *metaBlock;
         }
         return node(*this, combileVirtAddr(fileAddr, blockAddr, 0), buf.pool[index], index, pageSize);
         break;
 
     case CATALOG:
-        index = movBlock2Buffer(fileAddr, file.blockNum[fileAddr]);
-        return node(*this, combileVirtAddr(fileAddr, file.blockNum[fileAddr] - 1, 0), buf.pool[index], index, pageSize);
+        index = movBlock2Buffer(fileAddr, (blockAddr = file.blockNum[fileAddr]));
+        return node(*this, combileVirtAddr(fileAddr, blockAddr, 0), buf.pool[index], index, pageSize);
         break;
 
     default:
