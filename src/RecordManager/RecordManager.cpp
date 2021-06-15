@@ -153,4 +153,4 @@ int RecordManager::selectRecord(hword fileAddr, filter &flt)
     return SUCCESS;
 }
 
-RecordManager rcdMgr
+RecordManager rcdMgr;
