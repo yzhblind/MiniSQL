@@ -1,6 +1,10 @@
 #include "RecordManager.hpp"
 #include <cstring>
 
+static inline hword extractFileAddr(dword virtAddr) { return virtAddr >> 48; }
+static inline hword extractOffset(dword virtAddr) { return virtAddr & 0xFFFF; }
+static inline word extractBlockAddr(dword virtAddr) { return (virtAddr >> 16) & 0xFFFFFFFF; }
+
 const void *condExpr::copyVal(const std::vector<attribute> &origin, const int pos, const void *val)
 {
     void *res = origin[pos].type <= 1 ? new char[4] : new char[origin[pos].type];
@@ -85,22 +89,66 @@ bool filter::check(const condExpr &c, void *record)
     break;
     }
 }
-int filter::push(void *record)
+int filter::push(void *record, dword vAddr, bool delFlag)
 {
     for (int i = 0; i < cond.size(); ++i)
         if (check(cond[i], record) == false)
-        {
-            static_cast<const char *>(record);
             return FAILURE;
-        }
-    res.push_back(record);
+    if (!delFlag)
+    {
+        char *p = new char[*offset.rbegin()];
+        memcpy(p, record, *offset.rbegin());
+        res.push_back(p);
+    }
+    if (delFlag)
+        resAddr.push_back(vAddr);
     return SUCCESS;
 }
 
-RecordManager::RecordManager(/* args */)
+int RecordManager::insertRecord(hword fileAddr, void *data)
 {
+    node wrt = bufMgr.getNextFree(fileAddr);
+    return wrt.write(data, 0, wrt.getSize());
 }
-
-RecordManager::~RecordManager()
+int RecordManager::deleteRecord(hword fileAddr, filter &flt)
 {
+    int blockNum = bufMgr.getBlockNumber(fileAddr);
+    int rSize = bufMgr.getRecordSize(fileAddr);
+    if (blockNum == -1 || rSize == -1)
+        return FAILURE;
+    char *record = new char[rSize + 1];
+    for (int i = 1; i < blockNum; ++i)
+    {
+        node t = bufMgr.getBlock(fileAddr, i);
+        int tSize = t.getSize();
+        for (int offset = 0; offset < tSize - rSize; offset += rSize + 1)
+        {
+            t.read(record, offset, rSize + 1);
+            if (*record == true)
+                flt.push(record + 1, t.getVirtAddr() + offset);
+        }
+    }
+    for (int i = 0; i < flt.resAddr.size(); ++i)
+        bufMgr.deleteRecord(extractFileAddr(flt.resAddr[i]), extractBlockAddr(flt.resAddr[i]), extractOffset(flt.resAddr[i]));
+    return SUCCESS;
+}
+int RecordManager::selectRecord(hword fileAddr, filter &flt)
+{
+    int blockNum = bufMgr.getBlockNumber(fileAddr);
+    int rSize = bufMgr.getRecordSize(fileAddr);
+    if (blockNum == -1 || rSize == -1)
+        return FAILURE;
+    char *record = new char[rSize + 1];
+    for (int i = 1; i < blockNum; ++i)
+    {
+        node t = bufMgr.getBlock(fileAddr, i);
+        int tSize = t.getSize();
+        for (int offset = 0; offset < tSize - rSize; offset += rSize + 1)
+        {
+            t.read(record, offset, rSize + 1);
+            if (*record == true)
+                flt.push(record + 1, t.getVirtAddr() + offset);
+        }
+    }
+    return SUCCESS;
 }

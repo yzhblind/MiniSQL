@@ -31,24 +31,23 @@ private:
     const std::vector<attribute> &origin;
     std::vector<int> offset;
     std::vector<condExpr> cond;
-    std::vector<void *> res;
     bool check(const condExpr &c, void *record);
 
 public:
+    std::vector<void *> res;
+    std::vector<dword> resAddr;
     filter(const std::vector<attribute> &origin);
     ~filter();
     int addCond(const condExpr &c);
-    int push(void *record);
-    int output(std::ostream &out, int alignment) const;
+    int push(void *record, dword vAddr, bool delFlag = false);
 };
 
 class RecordManager
 {
-private:
-    /* data */
 public:
-    RecordManager(/* args */);
-    ~RecordManager();
+    int insertRecord(hword fileAddr, void *data);
+    int deleteRecord(hword fileAddr, filter &flt);
+    int selectRecord(hword fileAddr, filter &flt);
 };
 
 extern RecordManager rcdMgr;
