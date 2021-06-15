@@ -125,7 +125,7 @@ int RecordManager::deleteRecord(hword fileAddr, filter &flt)
         {
             t.read(record, offset, rSize + 1);
             if (*record == true)
-                flt.push(record + 1, t.getVirtAddr() + offset);
+                flt.push(record + 1, t.getVirtAddr() + offset, true);
         }
     }
     for (int i = 0; i < flt.resAddr.size(); ++i)
