@@ -3,6 +3,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <cstring>
 
 struct attribute
 {

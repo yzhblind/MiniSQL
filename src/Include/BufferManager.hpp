@@ -57,7 +57,6 @@ private:
     buffer buf;
     fileIndex file;
     static long long bufferSize;
-    static const long long pageSize;
     inline bool notValidAddr(const hword fileAddr) const { return fileAddr >= file.pointer.size() || file.valid[fileAddr] == false; }
     inline bool notValidAddr(const hword fileAddr, const word blockAddr) const { return blockAddr == 0 || blockAddr >= file.blockNum[fileAddr]; }
     void bufferAdjust();
@@ -68,9 +67,11 @@ private:
     int movBlock2Buffer(const hword fileAddr, const word blockAddr);
 
 public:
+    static const long long pageSize;
     BufferManager();
     ~BufferManager();
     inline int getBlockNumber(const hword fileAddr) const { if (notValidAddr(fileAddr)) return FAILURE; else return file.blockNum[fileAddr]; }
+    inline int getRecordSize (const hword fileAddr) const { if (notValidAddr(fileAddr)) return FAILURE; else return file.recordSize[fileAddr] - 1; }
     //按照filename打开文件，若成功返回打开文件的fileAddr，失败则返回FAILURE
     //若文件类型为DATA，则recordSize最小为2字节，其他类型的文件请让recordSize保持默认
     //本函数的recordSize参数表示纯记录大小，DATA文件中将在记录首部追加一字节的valid位

@@ -95,6 +95,9 @@ BufferManager::~BufferManager()
             writeBlock2File(i);
     for (int i = 0; i < bufferSize; ++i)
         delete[] static_cast<char *>(buf.pool[i]);
+    for (int i = 0; i < file.pointer.size(); ++i)
+        if (file.valid[i] == true)
+            fclose(file.pointer[i]);
 }
 int BufferManager::resize()
 {
@@ -181,12 +184,12 @@ int BufferManager::removeFile(const hword fileAddr, const std::string filename)
 {
     if (notValidAddr(fileAddr))
         return FAILURE;
-    writeMetaData(fileAddr);
+    //writeMetaData(fileAddr);
     for (int i = 0; i < bufferSize; ++i)
         if (extractFileAddr(buf.tag[i]) == fileAddr && buf.valid[i] == true)
         {
-            if (buf.dirty[i] == true)
-                writeBlock2File(i);
+            //if (buf.dirty[i] == true)
+            //    writeBlock2File(i);
             buf.valid[i] = false;
             if (buf.pinned[i] > 0)
                 buf.LRU.splice(buf.LRU.end(), buf.fixed, buf.LRUIndex[i]);
@@ -194,6 +197,7 @@ int BufferManager::removeFile(const hword fileAddr, const std::string filename)
                 buf.LRU.splice(buf.LRU.end(), buf.LRU, buf.LRUIndex[i]);
         }
     file.valid[fileAddr] = false;
+    fclose(file.pointer[fileAddr]);
     file.freelist.push_front(fileAddr);
     return remove(filename.c_str()) ? FAILURE : SUCCESS;
 }
