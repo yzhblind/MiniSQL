@@ -21,6 +21,7 @@ struct schema
     std::string tableName;
     std::map<std::string, int> attributeIndex;
     std::vector<attribute> column;
+    int fileAddr;
     int primaryKey;
     int recordSize;
 };
