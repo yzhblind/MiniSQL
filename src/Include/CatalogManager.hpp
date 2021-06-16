@@ -18,8 +18,11 @@ public:
     // todo
     // recordSize
     // string fileAddress column;
-    getRecordSize(std::string& tableName);
-    getColumnAddr(std::string& tableName, std::string& attrName);
+    bool findSchema(std::string& tableName);
+    bool findSchemaColumn(std::string& tableName, std::string& attrName);
+    int getRecordSize(std::string& tableName);
+    int getColumnAddr(std::string& tableName, std::string& attrName);
+
 };
 
 extern CatalogManager ctgMgr;

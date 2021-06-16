@@ -133,8 +133,22 @@ int CatalogManager::dropSchema(std::string& tableName)
 
 std::vector<attribute>& CatalogManager::getColumn(std::string& scheName)
 {
-    if(ctgMgr.schemaIndex.find(scheName) == ctgMgr.schemaIndex.end())
-        return ;
     return ctgMgr.schemas[ctgMgr.schemaIndex[scheName]].column;
 }
 
+bool CatalogManager::findSchema(std::string& tableName)
+{
+    return ctgMgr.schemaIndex.find(tableName) != ctgMgr.schemaIndex.end();
+}
+
+bool CatalogManager::findSchemaColumn(std::string& tableName, std::string& attrName)
+{
+    if(!findSchema(tableName))
+        return false;
+    return ctgMgr.schemas[ctgMgr.schemaIndex[tableName]].attributeIndex.find(attrName) != ctgMgr.schemas[ctgMgr.schemaIndex[tableName]].attributeIndex.end();
+}
+
+int CatalogManager::getColumnAddr(std::string& tableName, std::string& attrName)
+{
+    return ctgMgr.schemas[ctgMgr.schemaIndex[tableName]].attributeIndex[attrName];
+}
