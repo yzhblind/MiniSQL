@@ -7,6 +7,7 @@
 
 struct attribute
 {
+    std::string attrName;
     // 0:int
     // 1:float
     // 2-256:char(2-256) [包含'\0']
