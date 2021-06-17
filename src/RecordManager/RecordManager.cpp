@@ -1,10 +1,6 @@
 #include "RecordManager.hpp"
+#include "Type.hpp"
 #include <cstring>
-
-static inline hword extractFileAddr(dword virtAddr) { return virtAddr >> 48; }
-static inline hword extractOffset(dword virtAddr) { return virtAddr & 0xFFFF; }
-static inline word extractBlockAddr(dword virtAddr) { return (virtAddr >> 16) & 0xFFFFFFFF; }
-static inline int type2size(int type) { return type <= 1 ? 4 : type; }
 
 const void *condExpr::copyVal(const std::vector<attribute> &origin, const int pos, const void *val)
 {

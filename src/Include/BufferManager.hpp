@@ -8,12 +8,7 @@
 #include <algorithm>
 #include <unordered_map>
 
-#define SUCCESS 0
-#define FAILURE -1
-
-typedef unsigned short int hword;
-typedef unsigned int word;
-typedef unsigned long long dword;
+#include "Type.hpp"
 
 enum fileType
 {

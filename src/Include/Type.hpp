@@ -5,6 +5,13 @@
 #include <vector>
 #include <cstring>
 
+#define SUCCESS 0
+#define FAILURE -1
+
+typedef unsigned short int hword;
+typedef unsigned int word;
+typedef unsigned long long dword;
+
 struct attribute
 {
     std::string attrName;
@@ -47,7 +54,25 @@ struct condExpr
     ~condExpr() { delete[] static_cast<const char *>(val); }
     condExpr(const condExpr &obj) : origin(obj.origin), pos(obj.pos), opr(obj.opr), val(copyVal(obj.origin, obj.pos, obj.val)) {}
 };
+class filter
+{
+private:
+    const std::vector<attribute> &origin;
+    std::vector<int> offset;
+    std::vector<condExpr> cond;
+    // int keyPos;
+    bool check(const condExpr &c, void *record);
 
+public:
+    std::vector<void *> res;
+    std::vector<dword> resAddr;
+    filter(const std::vector<attribute> &origin);
+    ~filter();
+    inline int getSize() { return *offset.rbegin(); }
+    int addCond(const condExpr &c);
+    int push(void *record, dword vAddr, bool delFlag = false);
+    // inline void setKeyPos(int pos) { keyPos = pos; }
+};
 struct element
 {
     int type;
@@ -86,3 +111,9 @@ bool operator==(const element &a, const element &b)
         break;
     }
 }
+
+inline hword extractFileAddr(dword virtAddr) { return virtAddr >> 48; }
+inline hword extractOffset(dword virtAddr) { return virtAddr & 0xFFFF; }
+inline word extractBlockAddr(dword virtAddr) { return (virtAddr >> 16) & 0xFFFFFFFF; }
+inline dword combileVirtAddr(hword fileAddr, word blockAddr, hword offset) { return (static_cast<dword>(fileAddr) << 48) | (static_cast<dword>(blockAddr) << 16) | static_cast<dword>(offset); }
+inline int type2size(int type) { return type <= 1 ? 4 : type; }
