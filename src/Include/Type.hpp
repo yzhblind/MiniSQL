@@ -53,4 +53,36 @@ struct element
     int type;
     void *ptr;
     element(int type, void *ptr) : type(type), ptr(ptr) {}
+    friend bool operator<(const element &a, const element &b);
+    friend bool operator==(const element &a, const element &b);
 };
+bool operator<(const element &a, const element &b)
+{
+    switch (a.type)
+    {
+    case 0:
+        return *static_cast<int *>(a.ptr) < *static_cast<int *>(b.ptr);
+        break;
+    case 1:
+        return *static_cast<float *>(a.ptr) < *static_cast<float *>(b.ptr);
+        break;
+    default:
+        return strncmp(static_cast<char *>(a.ptr), static_cast<char *>(b.ptr), a.type) < 0;
+        break;
+    }
+}
+bool operator==(const element &a, const element &b)
+{
+    switch (a.type)
+    {
+    case 0:
+        return *static_cast<int *>(a.ptr) == *static_cast<int *>(b.ptr);
+        break;
+    case 1:
+        return *static_cast<float *>(a.ptr) == *static_cast<float *>(b.ptr);
+        break;
+    default:
+        return strncmp(static_cast<char *>(a.ptr), static_cast<char *>(b.ptr), a.type) == 0;
+        break;
+    }
+}
