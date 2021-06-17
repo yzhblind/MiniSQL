@@ -252,20 +252,20 @@ node BufferManager::getNextFree(const hword fileAddr)
         return node(*this);
     }
 }
-node BufferManager::getRootBlock(const hword fileAddr)
-{
-    if (notValidAddr(fileAddr) || file.type[fileAddr] != INDEX)
-        return node(*this);
-    int index = movBlock2Buffer(fileAddr, file.recordSize[fileAddr]);
-    return node(*this, combileVirtAddr(fileAddr, file.recordSize[fileAddr], 0), buf.pool[index], index, pageSize);
-}
-int BufferManager::setRootBlock(const hword fileAddr, const word blockAddr)
-{
-    if (notValidAddr(fileAddr) || notValidAddr(fileAddr, blockAddr))
-        return FAILURE;
-    file.recordSize[fileAddr] = blockAddr;
-    return SUCCESS;
-}
+// node BufferManager::getRootBlock(const hword fileAddr)
+// {
+//     if (notValidAddr(fileAddr) || file.type[fileAddr] != INDEX)
+//         return node(*this);
+//     int index = movBlock2Buffer(fileAddr, file.recordSize[fileAddr]);
+//     return node(*this, combileVirtAddr(fileAddr, file.recordSize[fileAddr], 0), buf.pool[index], index, pageSize);
+// }
+// int BufferManager::setRootBlock(const hword fileAddr, const word blockAddr)
+// {
+//     if (notValidAddr(fileAddr) || notValidAddr(fileAddr, blockAddr))
+//         return FAILURE;
+//     file.recordSize[fileAddr] = blockAddr;
+//     return SUCCESS;
+// }
 node BufferManager::getBlock(const hword fileAddr, const word blockAddr)
 {
     if (notValidAddr(fileAddr))
