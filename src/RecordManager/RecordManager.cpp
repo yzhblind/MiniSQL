@@ -104,11 +104,56 @@ int filter::push(void *record, dword vAddr, bool delFlag)
         resAddr.push_back(vAddr);
     return SUCCESS;
 }
-
-int RecordManager::insertRecord(hword fileAddr, void *data)
+bool RecordManager::uniqueCheck(hword fileAddr, void *data, const std::vector<attribute> &origin)
 {
-    node wrt = bufMgr.getNextFree(fileAddr);
-    return wrt.write(data, 0, wrt.getSize());
+    std::vector<int> index2check;
+    index2check.clear();
+    for (int i = 0; i < origin.size(); ++i)
+        if (origin[i].isUnique == true && origin[i].indexRootAddr == 0)
+            index2check.push_back(i);
+    if (index2check.empty())
+        return true;
+    std::vector<int> offset;
+    offset.clear();
+    offset.push_back(0);
+    for (int i = 1; i < origin.size(); ++i)
+        offset.push_back(offset[i - 1] + (origin[i].type <= 1 ? 4 : origin[i].type));
+    int blockNum = bufMgr.getBlockNumber(fileAddr);
+    int rSize = bufMgr.getRecordSize(fileAddr);
+    char *record = new char[rSize + 1];
+    for (int i = 1; i < blockNum; ++i)
+    {
+        node t = bufMgr.getBlock(fileAddr, i);
+        int tSize = t.getSize();
+        for (int i = 0; i < tSize - rSize; i += rSize + 1)
+        {
+            t.read(record, i, rSize + 1);
+            if (*record == true)
+                for (int j = 0; j < index2check.size(); ++j)
+                    if (strncmp(static_cast<char *>(data) + 1 + offset[index2check[j]], record + 1 + offset[index2check[j]], origin[index2check[j]].type <= 1 ? 4 : origin[index2check[j]].type) == 0)
+                    {
+                        delete[] record;
+                        return false;
+                    }
+        }
+    }
+    delete[] record;
+    return true;
+}
+int RecordManager::insertRecord(hword fileAddr, void *data, const std::vector<attribute> &origin)
+{
+    int blockAddr = bufMgr.getNextFreeAddr(fileAddr);
+    if (blockAddr > 0)
+        bufMgr.pinBlock(fileAddr, blockAddr, PIN);
+    int ret = FAILURE;
+    if (uniqueCheck(fileAddr, data, origin))
+    {
+        node wrt = bufMgr.getNextFree(fileAddr);
+        ret = wrt.write(data, 0, wrt.getSize());
+    }
+    if (blockAddr > 0)
+        bufMgr.pinBlock(fileAddr, blockAddr, UNPIN);
+    return ret;
 }
 int RecordManager::deleteRecord(hword fileAddr, filter &flt)
 {
@@ -128,6 +173,7 @@ int RecordManager::deleteRecord(hword fileAddr, filter &flt)
                 flt.push(record + 1, t.getVirtAddr() + offset, true);
         }
     }
+    delete[] record;
     for (int i = 0; i < flt.resAddr.size(); ++i)
         bufMgr.deleteRecord(extractFileAddr(flt.resAddr[i]), extractBlockAddr(flt.resAddr[i]), extractOffset(flt.resAddr[i]));
     return SUCCESS;

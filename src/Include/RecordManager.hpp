@@ -44,8 +44,10 @@ public:
 
 class RecordManager
 {
+private:
+    bool uniqueCheck(hword fileAddr, void *data, const std::vector<attribute> &origin);
 public:
-    int insertRecord(hword fileAddr, void *data);
+    int insertRecord(hword fileAddr, void *data, const std::vector<attribute> &origin);
     int deleteRecord(hword fileAddr, filter &flt);
     int selectRecord(hword fileAddr, filter &flt);
 };
