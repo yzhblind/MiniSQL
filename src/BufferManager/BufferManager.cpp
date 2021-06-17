@@ -361,7 +361,7 @@ bool BufferManager::checkNodeValid(const node &x) const
 {
     if (x.getSize() <= 0)
         return false;
-    if (buf.valid[x.getBufferID()] == true && buf.tag[x.getBufferID()] == x.getVirtAddr())
+    if (buf.valid[x.getBufferID()] == true && buf.tag[x.getBufferID()] == (x.getVirtAddr() & 0xFFFFFFFFFFFF0000))
         return true;
     else
         return false;
