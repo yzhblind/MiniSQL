@@ -31,7 +31,7 @@ private:
     const std::vector<attribute> &origin;
     std::vector<int> offset;
     std::vector<condExpr> cond;
-    int keyPos;
+    // int keyPos;
     bool check(const condExpr &c, void *record);
 
 public:
@@ -41,7 +41,7 @@ public:
     ~filter();
     int addCond(const condExpr &c);
     int push(void *record, dword vAddr, bool delFlag = false);
-    inline void setKeyPos(int pos) { keyPos = pos; }
+    // inline void setKeyPos(int pos) { keyPos = pos; }
 };
 
 class RecordManager

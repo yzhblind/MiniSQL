@@ -14,7 +14,7 @@ const void *condExpr::copyVal(const std::vector<attribute> &origin, const int po
 
 filter::filter(const std::vector<attribute> &origin) : origin(origin)
 {
-    keyPos = -1;
+    // keyPos = -1;
     offset.push_back(0);
     for (int i = 1; i <= origin.size(); ++i)
         offset.push_back(offset[i - 1] + type2size(origin[i].type));
@@ -96,22 +96,17 @@ int filter::push(void *record, dword vAddr, bool delFlag)
     for (int i = 0; i < cond.size(); ++i)
         if (check(cond[i], record) == false)
             return FAILURE;
-    if (delFlag == false)
-    {
-        char *p = new char[*offset.rbegin()];
-        memcpy(p, record, *offset.rbegin());
-        res.push_back(p);
-    }
-    else
-    {
+    char *p = new char[*offset.rbegin()];
+    memcpy(p, record, *offset.rbegin());
+    res.push_back(p);
+    if (delFlag == true)
         resAddr.push_back(vAddr);
-        if (keyPos >= 0 && keyPos < origin.size())
-        {
-            char *p = new char[type2size(origin[keyPos].type)];
-            memcpy(p, static_cast<char *>(record) + offset[keyPos], type2size(origin[keyPos].type));
-            res.push_back(p);
-        }
-    }
+    // if (keyPos >= 0 && keyPos < origin.size())
+    // {
+    //     char *p = new char[type2size(origin[keyPos].type)];
+    //     memcpy(p, static_cast<char *>(record) + offset[keyPos], type2size(origin[keyPos].type));
+    //     res.push_back(p);
+    // }
     return SUCCESS;
 }
 bool RecordManager::uniqueCheck(hword fileAddr, void *data, const std::vector<attribute> &origin)
