@@ -8,7 +8,6 @@
 // 6字节ptr和定长keyValue共n-1组
 // 6字节ptr
 
-//所有操作接口均不处理parent节点关系
 class bnode : public node
 {
 private:
@@ -21,6 +20,7 @@ private:
     //返回第一个大于等于e的元素的index
     int binarySearch(const element &e);
     void *move(int start, int dir, int type);
+    void *rmove(int start, int dir, int type);
 
 public:
     static void *tmpMemory;
@@ -28,16 +28,14 @@ public:
     ~bnode();
     inline int getCnt() { return *cnt; }
     inline void setParent(word blockAddr) { *parent = blockAddr; }
-    dword find(const element &key, const hword fileAddr);
+    dword find(const element &key);
     //返回插入位置的index，需保证节点未满
     int insertKey(const element &key, const dword virtAddr);
     int deleteKey(const element &key);
-    int replaceKey(const element &key, const dword virtAddr);
+    int replaceKey(const element &key, const element &newKey);
     bnode split(const element &key, const dword virtAddr);
-    //返回被取走的元素,需保证src的元素均大于当前节点
-    element splice(bnode &src);
-    //返回被合并节点的最小值，需保证src的元素均大于当前节点
-    element merge(bnode &src);
+    int splice(bnode &par, bnode &src, int type);
+    element merge(bnode &par, bnode &src, int type);
     //于硬盘上删除bnode对应的块
     void deleteBlock() { origin.deleteBlock(getFileAddr(), getBlockAddr()); }
 };

@@ -50,7 +50,16 @@ void *bnode::move(int start, int dir, int type)
     *cnt += dir;
     return base + src;
 }
-dword bnode::find(const element &key, const hword fileAddr)
+void *bnode::rmove(int start, int dir, int type)
+{
+    int dest = index2offset(start + dir, type) + 6;
+    int src = index2offset(start, type) + 6;
+    int end = index2offset(*cnt, type) + 6;
+    memmove(base + dest, base + src, end - src);
+    *cnt += dir;
+    return base + src;
+}
+dword bnode::find(const element &key)
 {
     int idx = binarySearch(key);
     if (idx != *cnt)
@@ -60,7 +69,7 @@ dword bnode::find(const element &key, const hword fileAddr)
         {
             word blockAddr = *reinterpret_cast<word *>(base + offset);
             hword offsetAddr = *reinterpret_cast<hword *>(base + offset + 4);
-            return combileVirtAddr(fileAddr, blockAddr, offsetAddr);
+            return combileVirtAddr(getFileAddr(), blockAddr, offsetAddr);
         }
     }
     return 0;
@@ -92,7 +101,7 @@ int bnode::deleteKey(const element &key)
     }
     return FAILURE;
 }
-int bnode::replaceKey(const element &key, const dword virtAddr)
+int bnode::replaceKey(const element &key, const element &newKey)
 {
     int idx = binarySearch(key);
     if (idx != *cnt)
@@ -102,7 +111,7 @@ int bnode::replaceKey(const element &key, const dword virtAddr)
         if (key == t)
         {
             origin.setDirty(getFileAddr(), getBlockAddr());
-            t.cpy(key);
+            t.cpy(newKey);
             return idx;
         }
     }
@@ -132,17 +141,88 @@ bnode bnode::split(const element &key, const dword virtAddr)
     phyAddr = phyAddrSave;
     return t;
 }
-element bnode::splice(bnode &src)
+int bnode::splice(bnode &par, bnode &src, int type)
 {
+    // bnode par(origin.getBlock(getFileAddr(), *parent));
     origin.setDirty(getFileAddr(), getBlockAddr());
     src.origin.setDirty(src.getFileAddr(), src.getBlockAddr());
-    
+    par.origin.setDirty(par.getFileAddr(), par.getBlockAddr());
+    if (element(type, src.base + index2offset(0, type) + 6) < element(type, base + index2offset(0, type) + 6))
+    {
+        int firstKey = index2offset(0, type);
+        int lastKey = index2offset(*src.cnt - 1, type);
+        element key = element(type, src.base + lastKey + 6);
+        dword virtAddr = combileVirtAddr(0, *reinterpret_cast<word *>(src.base + lastKey), *reinterpret_cast<hword *>(src.base + lastKey + 4));
+        if (*base == 0)
+        {
+            element oldKey(type, base + firstKey + 6);
+            par.replaceKey(oldKey, key);
+            insertKey(key, virtAddr);
+            src.move(*src.cnt, -1, type);
+        }
+        else
+        {
+            int idx = par.binarySearch(key);
+            element parentKey(type, par.base + index2offset(idx, type) + 6);
+            insertKey(parentKey, virtAddr);
+            parentKey.cpy(key);
+            --*src.cnt;
+        }
+    }
+    else
+    {
+        int firstKey = index2offset(0, type);
+        dword virtAddr = combileVirtAddr(0, *reinterpret_cast<word *>(src.base + firstKey), *reinterpret_cast<hword *>(src.base + firstKey + 4));
+        if (*base == 0)
+        {
+            int secondKey = index2offset(1, type);
+            element oldKey = element(type, src.base + firstKey + 6);
+            element key = element(type, src.base + secondKey + 6);
+            par.replaceKey(oldKey, key);
+            insertKey(oldKey, virtAddr);
+            src.move(1, -1, type);
+        }
+        else
+        {
+            int lastKey = index2offset(*cnt - 1, type);
+            element pKey = element(type, base + lastKey + 6);
+            int idx = par.binarySearch(pKey);
+            element parKey = element(type, par.base + index2offset(idx, type) + 6);
+            element key = element(type, src.base + firstKey + 6);
+            insertKey(parKey, virtAddr);
+            parKey.cpy(key);
+            src.move(1, -1, type);
+        }
+    }
+    return 0;
 }
-element bnode::merge(bnode &src)
+element bnode::merge(bnode &par, bnode &src, int type)
 {
+    //bnode par(origin.getBlock(getFileAddr(), *parent));
     origin.setDirty(getFileAddr(), getBlockAddr());
-    //TODO
+    //int firstKey = index2offset(0, type);
+    int lastKey = index2offset(*cnt - 1, type);
+    element key = element(type, base + lastKey + 6);
+    if (*base == 0)
+    {
+        int dest = index2offset(*cnt, type);
+        int end = index2offset(*src.cnt, type) + 6;
+        memcpy(base + dest, src.base, end);
+        *cnt += *src.cnt;
+    }
+    else
+    {
+        int idx = par.binarySearch(key);
+        element parKey(type, par.base + index2offset(idx, type) + 6);
+        element endKey(type, base + index2offset(*cnt, type) + 6);
+        endKey.cpy(parKey);
+        int dest = index2offset(*cnt + 1, type);
+        int end = index2offset(*src.cnt, type) + 6;
+        memcpy(base + dest, src.base, end);
+        *cnt += *src.cnt + 1;
+    }
     src.deleteBlock();
+    return key;
 }
 
 dword IndexManager::findAddrEntry(const hword dataFileAddr, const word rootAddr, const element &keyValue)
