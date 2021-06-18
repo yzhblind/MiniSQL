@@ -12,6 +12,12 @@ typedef unsigned short int hword;
 typedef unsigned int word;
 typedef unsigned long long dword;
 
+inline hword extractFileAddr(dword virtAddr) { return virtAddr >> 48; }
+inline hword extractOffset(dword virtAddr) { return virtAddr & 0xFFFF; }
+inline word extractBlockAddr(dword virtAddr) { return (virtAddr >> 16) & 0xFFFFFFFF; }
+inline dword combileVirtAddr(hword fileAddr, word blockAddr, hword offset) { return (static_cast<dword>(fileAddr) << 48) | (static_cast<dword>(blockAddr) << 16) | static_cast<dword>(offset); }
+inline int type2size(int type) { return type <= 1 ? 4 : type; }
+
 struct attribute
 {
     std::string attrName;
@@ -112,9 +118,3 @@ bool operator==(const element &a, const element &b)
         break;
     }
 }
-
-inline hword extractFileAddr(dword virtAddr) { return virtAddr >> 48; }
-inline hword extractOffset(dword virtAddr) { return virtAddr & 0xFFFF; }
-inline word extractBlockAddr(dword virtAddr) { return (virtAddr >> 16) & 0xFFFFFFFF; }
-inline dword combileVirtAddr(hword fileAddr, word blockAddr, hword offset) { return (static_cast<dword>(fileAddr) << 48) | (static_cast<dword>(blockAddr) << 16) | static_cast<dword>(offset); }
-inline int type2size(int type) { return type <= 1 ? 4 : type; }

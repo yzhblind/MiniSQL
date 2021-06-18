@@ -16,8 +16,12 @@ IndexManager::IndexManager()
     {
         int size = type2size(i) + 6;
         bcnt[i] = (BufferManager::pageSize - 2 - 4 - 4 - 6) / size + 1;
+        bInMincnt[i] = (bcnt[i] + 1) / 2 - 1;
+        bLeafMincnt[i] = bcnt[i] / 2;
     }
+    bnode::tmpMemory = new char[BufferManager::pageSize + 256];
 }
+IndexManager::~IndexManager() { delete[] static_cast<char *>(bnode::tmpMemory); }
 int bnode::binarySearch(const element &e)
 {
     if (e < element(e.type, base + index2offset(*cnt - 1, e.type) + 6))
@@ -46,11 +50,27 @@ void *bnode::move(int start, int dir, int type)
     *cnt += dir;
     return base + src;
 }
+dword bnode::find(const element &key, const hword fileAddr)
+{
+    int idx = binarySearch(key);
+    if (idx != *cnt)
+    {
+        int offset = index2offset(key.type, idx);
+        if (key == element(key.type, base + offset + 6))
+        {
+            word blockAddr = *reinterpret_cast<word *>(base + offset);
+            hword offsetAddr = *reinterpret_cast<hword *>(base + offset + 4);
+            return combileVirtAddr(fileAddr, blockAddr, offsetAddr);
+        }
+    }
+    return 0;
+}
 int bnode::insertKey(const element &key, const dword virtAddr)
 {
-    if (*cnt == idxMgr.bcnt[key.type] - 1)
-        return FAILURE;
-    int idx = binarySearch(key);
+    //if (*cnt == idxMgr.bcnt[key.type] - 1)
+    //    return FAILURE;
+    int idx = (*cnt == 0) ? 0 : binarySearch(key);
+    origin.setDirty(getFileAddr(), getBlockAddr());
     void *p = move(idx, 1, key.type);
     *static_cast<word *>(p) = extractBlockAddr(virtAddr);
     *static_cast<hword *>(p + 4) = extractOffset(virtAddr);
@@ -65,6 +85,7 @@ int bnode::deleteKey(const element &key)
         int offset = index2offset(key.type, idx) + 6;
         if (key == element(key.type, base + offset))
         {
+            origin.setDirty(getFileAddr(), getBlockAddr());
             move(idx + 1, -1, key.type);
             return idx;
         }
@@ -73,19 +94,55 @@ int bnode::deleteKey(const element &key)
 }
 int bnode::replaceKey(const element &key, const dword virtAddr)
 {
-    
+    int idx = binarySearch(key);
+    if (idx != *cnt)
+    {
+        int offset = index2offset(key.type, idx) + 6;
+        element &&t = element(key.type, base + offset);
+        if (key == t)
+        {
+            origin.setDirty(getFileAddr(), getBlockAddr());
+            t.cpy(key);
+            return idx;
+        }
+    }
+    return FAILURE;
 }
 bnode bnode::split(const element &key, const dword virtAddr)
 {
-
+    memcpy(tmpMemory, phyAddr, BufferManager::pageSize);
+    void *phyAddrSave = phyAddr;
+    phyAddr = tmpMemory;
+    insertKey(key, virtAddr);
+    int lcnt = (*cnt + 1) / 2;
+    int rcnt = *cnt - lcnt;
+    bnode t(origin.getNextFree(getFileAddr()));
+    *t.base = *base, *t.cnt = rcnt;
+    int dest = index2offset(0, key.type);
+    int src = index2offset(lcnt, key.type);
+    int end = index2offset(*cnt, key.type) + 6;
+    *cnt = lcnt;
+    memcpy(t.base + dest, base + src, end - src);
+    t.origin.setDirty(t.getFileAddr(), t.getBlockAddr());
+    if (*base == 0)
+        *reinterpret_cast<word *>(base + src) = t.getBlockAddr();
+    else
+        --*cnt;
+    memcpy(phyAddrSave, phyAddr, src);
+    phyAddr = phyAddrSave;
+    return t;
 }
 element bnode::splice(bnode &src)
 {
-
+    origin.setDirty(getFileAddr(), getBlockAddr());
+    src.origin.setDirty(src.getFileAddr(), src.getBlockAddr());
+    
 }
 element bnode::merge(bnode &src)
 {
-
+    origin.setDirty(getFileAddr(), getBlockAddr());
+    //TODO
+    src.deleteBlock();
 }
 
 dword IndexManager::findAddrEntry(const hword dataFileAddr, const word rootAddr, const element &keyValue)
