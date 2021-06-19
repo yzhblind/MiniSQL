@@ -8,10 +8,18 @@
 // 6字节ptr和定长keyValue共n-1组
 // 6字节ptr
 
+enum packing
+{
+    PTR_DATA,
+    DATA_PTR
+};
+
 class bnode : public node
 {
 private:
-    //0-leaf，1-inode，2-root
+    static void *tmpMemory;
+    //0-leaf，1-inode
+    //(base+1)-root
     char *base;
     word *parent;
     int *cnt;
@@ -19,22 +27,25 @@ private:
     //使用时保证*cnt > 0
     //返回第一个大于等于e的元素的index
     int binarySearch(const element &e);
-    void *move(int start, int dir, int type);
-    void *rmove(int start, int dir, int type);
+    void *move(int start, int dir, int type, const packing packingType = PTR_DATA);
+    //void *rmove(int start, int dir, int type);
 
 public:
-    static void *tmpMemory;
+    friend class IndexManager;
     bnode(const node &src);
     ~bnode();
+    inline int getBase() { return *base; }
     inline int getCnt() { return *cnt; }
+    inline word getParent() { return *parent; }
     inline void setParent(word blockAddr) { *parent = blockAddr; }
-    dword find(const element &key);
+    dword find(const element &key, const packing packingType = PTR_DATA);
     //返回插入位置的index，需保证节点未满
-    int insertKey(const element &key, const dword virtAddr);
-    int deleteKey(const element &key);
+    int insertKey(const element &key, const dword virtAddr, const packing packingType = PTR_DATA);
+    int deleteKey(const element &key, const packing packingType = PTR_DATA);
     int replaceKey(const element &key, const element &newKey);
     bnode split(const element &key, const dword virtAddr);
     int splice(bnode &par, bnode &src, int type);
+    //返回第一个小于父节点中应被删除索引的元素
     element merge(bnode &par, bnode &src, int type);
     //于硬盘上删除bnode对应的块
     void deleteBlock() { origin.deleteBlock(getFileAddr(), getBlockAddr()); }
@@ -45,7 +56,10 @@ class IndexManager
 private:
     hword indexFileAddr;
     //返回可能存在key的叶节点块地址
-    word find();
+    word find(const word curAddr, const word parentAddr, const element &keyValue);
+    //如果更新了根节点返回根节点的blockAddr，否则返回0
+    word insertInParent(bnode &cur, const element &key, const word addr);
+    word dlt();
 
 public:
     int bcnt[257];

@@ -41,25 +41,25 @@ int bnode::binarySearch(const element &e)
     else
         return *cnt;
 }
-void *bnode::move(int start, int dir, int type)
+void *bnode::move(int start, int dir, int type, const packing packingType)
 {
-    int dest = index2offset(start + dir, type);
-    int src = index2offset(start, type);
+    int dest = index2offset(start + dir, type) + (packingType == PTR_DATA ? 0 : 6);
+    int src = index2offset(start, type) + (packingType == PTR_DATA ? 0 : 6);
     int end = index2offset(*cnt, type) + 6;
     memmove(base + dest, base + src, end - src);
     *cnt += dir;
     return base + src;
 }
-void *bnode::rmove(int start, int dir, int type)
-{
-    int dest = index2offset(start + dir, type) + 6;
-    int src = index2offset(start, type) + 6;
-    int end = index2offset(*cnt, type) + 6;
-    memmove(base + dest, base + src, end - src);
-    *cnt += dir;
-    return base + src;
-}
-dword bnode::find(const element &key)
+// void *bnode::rmove(int start, int dir, int type)
+// {
+//     int dest = index2offset(start + dir, type) + 6;
+//     int src = index2offset(start, type) + 6;
+//     int end = index2offset(*cnt, type) + 6;
+//     memmove(base + dest, base + src, end - src);
+//     *cnt += dir;
+//     return base + src;
+// }
+dword bnode::find(const element &key, const packing packingType)
 {
     int idx = binarySearch(key);
     if (idx != *cnt)
@@ -67,37 +67,37 @@ dword bnode::find(const element &key)
         int offset = index2offset(key.type, idx);
         if (key == element(key.type, base + offset + 6))
         {
-            word blockAddr = *reinterpret_cast<word *>(base + offset);
-            hword offsetAddr = *reinterpret_cast<hword *>(base + offset + 4);
+            word blockAddr = *reinterpret_cast<word *>(base + offset + (packingType == PTR_DATA ? 0 : 6 + type2size(key.type)));
+            hword offsetAddr = *reinterpret_cast<hword *>(base + offset + 4 + (packingType == PTR_DATA ? 0 : 6 + type2size(key.type)));
             return combileVirtAddr(getFileAddr(), blockAddr, offsetAddr);
         }
     }
     return 0;
 }
-int bnode::insertKey(const element &key, const dword virtAddr)
+int bnode::insertKey(const element &key, const dword virtAddr, const packing packingType)
 {
     //if (*cnt == idxMgr.bcnt[key.type] - 1)
     //    return FAILURE;
     int idx = (*cnt == 0) ? 0 : binarySearch(key);
     origin.setDirty(getFileAddr(), getBlockAddr());
-    void *p = move(idx, 1, key.type);
-    *static_cast<word *>(p) = extractBlockAddr(virtAddr);
-    *static_cast<hword *>(p + 4) = extractOffset(virtAddr);
-    element(key.type, p + 6).cpy(key);
+    char *p = static_cast<char *>(move(idx, 1, key.type, packingType));
+    *reinterpret_cast<word *>(p + (packingType == PTR_DATA ? 0 : type2size(key.type))) = extractBlockAddr(virtAddr);
+    *reinterpret_cast<hword *>(p + (packingType == PTR_DATA ? 0 : type2size(key.type)) + 4) = extractOffset(virtAddr);
+    element(key.type, p + (packingType == PTR_DATA ? 6 : 0)).cpy(key);
     return idx;
 }
-int bnode::deleteKey(const element &key)
+int bnode::deleteKey(const element &key, const packing packingType)
 {
     int idx = binarySearch(key);
     if (idx != *cnt)
     {
         int offset = index2offset(key.type, idx) + 6;
-        if (key == element(key.type, base + offset))
-        {
-            origin.setDirty(getFileAddr(), getBlockAddr());
-            move(idx + 1, -1, key.type);
-            return idx;
-        }
+        // if (key == element(key.type, base + offset))
+        // {
+        origin.setDirty(getFileAddr(), getBlockAddr());
+        move(idx + 1, -1, key.type, packingType);
+        return idx;
+        // }
     }
     return FAILURE;
 }
@@ -122,11 +122,11 @@ bnode bnode::split(const element &key, const dword virtAddr)
     memcpy(tmpMemory, phyAddr, BufferManager::pageSize);
     void *phyAddrSave = phyAddr;
     phyAddr = tmpMemory;
-    insertKey(key, virtAddr);
+    insertKey(key, virtAddr, *base == 0 ? PTR_DATA : DATA_PTR);
     int lcnt = (*cnt + 1) / 2;
     int rcnt = *cnt - lcnt;
     bnode t(origin.getNextFree(getFileAddr()));
-    *t.base = *base, *t.cnt = rcnt;
+    *t.base = *base, *(t.base + 1) = 0, *t.cnt = rcnt;
     int dest = index2offset(0, key.type);
     int src = index2offset(lcnt, key.type);
     int end = index2offset(*cnt, key.type) + 6;
@@ -224,19 +224,73 @@ element bnode::merge(bnode &par, bnode &src, int type)
     src.deleteBlock();
     return key;
 }
-
+word IndexManager::find(const word curAddr, const word parentAddr, const element &keyValue)
+{
+    bnode cur(bufMgr.getBlock(indexFileAddr, curAddr));
+    cur.setParent(parentAddr);
+    if (cur.getBase() == 0)
+        return curAddr;
+    else
+        return find(extractBlockAddr(cur.find(keyValue)), curAddr, keyValue);
+}
 dword IndexManager::findAddrEntry(const hword dataFileAddr, const word rootAddr, const element &keyValue)
 {
-    //TODO
+    word leafAddr = find(rootAddr, 0, keyValue);
+    bnode leaf(bufMgr.getBlock(indexFileAddr, leafAddr));
+    dword res = leaf.find(keyValue);
+    return res > 0 ? combileVirtAddr(dataFileAddr, extractBlockAddr(res), extractOffset(res)) : 0;
 }
 node IndexManager::findRecordEntry(const hword dataFileAddr, const word rootAddr, const element &keyValue)
 {
     dword virtAddr = findAddrEntry(dataFileAddr, rootAddr, keyValue);
     return bufMgr.getRecord(dataFileAddr, extractBlockAddr(virtAddr), extractOffset(virtAddr));
 }
+word IndexManager::insertInParent(bnode &cur, const element &key, const word addr)
+{
+    if (*(cur.base + 1) == 1)
+    {
+        bnode newRoot(bufMgr.getNextFree(indexFileAddr));
+        *(cur.base + 1) = 0;
+        newRoot.origin.setDirty(indexFileAddr, newRoot.getBlockAddr());
+        *newRoot.base = 1, *(newRoot.base + 1) = 1, *newRoot.cnt = 0;
+        *reinterpret_cast<word *>(newRoot.base + newRoot.index2offset(0, key.type)) = cur.getBlockAddr();
+        newRoot.insertKey(key, combileVirtAddr(0, addr, 0), DATA_PTR);
+        return newRoot.getBlockAddr();
+    }
+    bnode p(bufMgr.getBlock(indexFileAddr, cur.getParent()));
+    if (p.getCnt() < bcnt[key.type] - 1)
+    {
+        p.insertKey(key, combileVirtAddr(0, addr, 0), DATA_PTR);
+        return 0;
+    }
+    else
+    {
+        bnode t = p.split(key, combileVirtAddr(0, addr, 0));
+        element tKey(key.type, t.base + t.index2offset(0, key.type) + 6);
+        return insertInParent(p, tKey, t.getBlockAddr());
+    }
+}
 int IndexManager::insertEntry(const hword dataFileAddr, attribute &attr, const element &keyValue, dword virtAddr)
 {
-    //TODO
+    int &rootAddr = attr.indexRootAddr;
+    const int &type = attr.type;
+    word leafAddr = find(rootAddr, 0, keyValue);
+    bnode leaf(bufMgr.getBlock(indexFileAddr, leafAddr));
+    if (leaf.getCnt() < bcnt[type] - 1)
+        leaf.insertKey(keyValue, virtAddr);
+    else
+    {
+        bnode t = leaf.split(keyValue, virtAddr);
+        element key(type, t.base + t.index2offset(0, type) + 6);
+        word tAddr = insertInParent(leaf, key, t.getBlockAddr());
+        if (tAddr > 0)
+            rootAddr = tAddr;
+    }
+    return SUCCESS;
+}
+word IndexManager::dlt()
+{
+
 }
 int IndexManager::deleteEntry(const hword dataFileAddr, std::vector<attribute> &col, const filter &flt)
 {
