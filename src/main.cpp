@@ -1,6 +1,11 @@
-#include "Interpreter.hpp"
+#include "interpreter.hpp"
 
-int main()
-{
-    return 0;
+
+int main() {
+	inst_reader in;
+	while (in.translate() != quit) {
+		in.clear();
+		in.reread();
+	}
+	return 0;
 }
