@@ -162,7 +162,7 @@ int RecordManager::deleteRecord(hword fileAddr, filter &flt)
 {
     int blockNum = bufMgr.getBlockNumber(fileAddr);
     int rSize = bufMgr.getRecordSize(fileAddr);
-    if (blockNum == -1 || rSize == -1)
+    if (blockNum == FAILURE || rSize == FAILURE)
         return FAILURE;
     char *record = new char[rSize + 1];
     for (int i = 1; i < blockNum; ++i)
@@ -185,7 +185,7 @@ int RecordManager::selectRecord(hword fileAddr, filter &flt)
 {
     int blockNum = bufMgr.getBlockNumber(fileAddr);
     int rSize = bufMgr.getRecordSize(fileAddr);
-    if (blockNum == -1 || rSize == -1)
+    if (blockNum == FAILURE || rSize == FAILURE)
         return FAILURE;
     char *record = new char[rSize + 1];
     for (int i = 1; i < blockNum; ++i)

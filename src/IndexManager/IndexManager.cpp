@@ -270,7 +270,7 @@ word IndexManager::insertInParent(bnode &cur, const element &key, const word add
         return insertInParent(p, tKey, t.getBlockAddr());
     }
 }
-int IndexManager::insertEntry(const hword dataFileAddr, attribute &attr, const element &keyValue, dword virtAddr)
+int IndexManager::insertEntry(attribute &attr, const element &keyValue, dword virtAddr)
 {
     int &rootAddr = attr.indexRootAddr;
     const int &type = attr.type;
@@ -288,21 +288,127 @@ int IndexManager::insertEntry(const hword dataFileAddr, attribute &attr, const e
     }
     return SUCCESS;
 }
-word IndexManager::dlt()
+word IndexManager::erase(bnode &cur, const element &keyValue, const packing delType)
 {
-
+    const int type = keyValue.type;
+    cur.deleteKey(keyValue, delType);
+    if (*(cur.base + 1) == 1)
+    {
+        if (cur.getCnt() == 0)
+        {
+            word t = *reinterpret_cast<word *>(cur.base + cur.index2offset(0, type));
+            bnode root(bufMgr.getBlock(indexFileAddr, t));
+            *(root.base + 1) = 1;
+            root.origin.setDirty(indexFileAddr, t);
+            cur.deleteBlock();
+            return t;
+        }
+    }
+    else if ((cur.getBase() == 0 && cur.getCnt() < bLeafMincnt[type]) || (cur.getBase() == 1 && cur.getCnt() < bInMincnt[type]))
+    {
+        bnode par(bufMgr.getBlock(indexFileAddr, cur.getParent()));
+        element searchKey(type, cur.base + cur.index2offset(cur.getCnt() - 1, type + 6));
+        int idx = par.binarySearch(searchKey);
+        word tAddr;
+        if (idx == par.getCnt())
+            tAddr = *reinterpret_cast<word *>(par.base + par.index2offset(idx - 1, type));
+        else
+            tAddr = *reinterpret_cast<word *>(par.base + par.index2offset(idx + 1, type));
+        bnode t(bufMgr.getBlock(indexFileAddr, tAddr));
+        t.setParent(cur.getParent());
+        bnode &a = (idx == par.getCnt()) ? cur : t;
+        bnode &b = (idx == par.getCnt()) ? t : cur;
+        if ((a.getBase() == 0 && a.getCnt() + b.getCnt() < bcnt[type]) || (a.getBase() == 1 && a.getCnt() + b.getCnt() < bcnt[type] - 1))
+        {
+            element key = a.merge(par, b, type);
+            return erase(a, key, DATA_PTR);
+        }
+        else
+            cur.splice(par, t, type);
+    }
+    return 0;
 }
 int IndexManager::deleteEntry(const hword dataFileAddr, std::vector<attribute> &col, const filter &flt)
 {
-    //TODO
+    int keyStart = 0;
+    for (auto &attr : col)
+    {
+        if (attr.isUnique == false || attr.indexRootAddr == 0)
+        {
+            keyStart += type2size(attr.type);
+            continue;
+        }
+        for (auto record : flt.res)
+        {
+            element key(attr.type, static_cast<char *>(record) + keyStart);
+            word leafAddr = find(attr.indexRootAddr, 0, key);
+            bnode leaf(bufMgr.getBlock(indexFileAddr, leafAddr));
+            if (*leaf.base == 0 && *(leaf.base + 1) == 1)
+                leaf.deleteKey(key);
+            else
+            {
+                word tAddr = erase(leaf, key, PTR_DATA);
+                if (tAddr > 0)
+                    attr.indexRootAddr = tAddr;
+            }
+        }
+        keyStart += type2size(attr.type);
+    }
+    return SUCCESS;
 }
 int IndexManager::createEntry(const hword dataFileAddr, std::vector<attribute> &col, int pos)
 {
-    //TODO
+    if (col[pos].isUnique == false)
+        return FAILURE;
+    const int type = col[pos].type;
+    int &rootAddr = col[pos].indexRootAddr;
+    bnode root(bufMgr.getNextFree(indexFileAddr));
+    rootAddr = root.getBlockAddr();
+    *(root.base) = 0, *(root.base + 1) = 1, *(root.cnt) = 0;
+    *reinterpret_cast<dword *>(root.base + root.index2offset(0, type)) = 0;
+    root.origin.setDirty(indexFileAddr, rootAddr);
+    int keyOffset = 0;
+    for (int i = 0; i < pos; ++i)
+        keyOffset += type2size(col[i].type);
+    int blockNum = bufMgr.getBlockNumber(dataFileAddr);
+    int rSize = bufMgr.getRecordSize(dataFileAddr);
+    if (blockNum == FAILURE || rSize == FAILURE)
+        return FAILURE;
+    char *record = new char[rSize + 1];
+    for (int i = 1; i < blockNum; ++i)
+    {
+        node t = bufMgr.getBlock(dataFileAddr, i);
+        int tSize = t.getSize();
+        for (int offset = 0; offset < tSize - rSize; offset += rSize + 1)
+        {
+            t.read(record, offset, rSize + 1);
+            if (*record == true)
+            {
+                element key(type, record + 1 + keyOffset);
+                insertEntry(col[pos], key, t.getVirtAddr() + offset);
+            }
+        }
+    }
+    delete[] record;
+    return SUCCESS;
 }
-int IndexManager::dropEntry(const hword dataFileAddr, std::vector<attribute> &col, int pos)
+void IndexManager::drop(word curAddr, const int type)
 {
-    //TODO
+    bnode cur(bufMgr.getBlock(indexFileAddr, curAddr));
+    if (cur.getBase() == 1)
+        for (int i = 0; i <= cur.getCnt(); ++i)
+            drop(*reinterpret_cast<word *>(cur.base + cur.index2offset(i, type)), type);
+    cur.deleteBlock();
+}
+int IndexManager::dropEntry(std::vector<attribute> &col, int pos)
+{
+    if (col[pos].indexRootAddr == 0)
+        return FAILURE;
+    const int type = col[pos].type;
+    int &rootAddr = col[pos].indexRootAddr;
+    drop(rootAddr, type);
+    rootAddr = 0;
+    return SUCCESS;
 }
 
 IndexManager idxMgr;

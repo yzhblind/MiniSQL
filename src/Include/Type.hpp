@@ -74,6 +74,7 @@ public:
     std::vector<dword> resAddr;
     filter(const std::vector<attribute> &origin);
     ~filter();
+    inline int getOffset(int pos) { return offset[pos]; }
     inline int getSize() { return *offset.rbegin(); }
     int addCond(const condExpr &c);
     int push(void *record, dword vAddr, bool delFlag = false);

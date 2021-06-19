@@ -59,7 +59,8 @@ private:
     word find(const word curAddr, const word parentAddr, const element &keyValue);
     //如果更新了根节点返回根节点的blockAddr，否则返回0
     word insertInParent(bnode &cur, const element &key, const word addr);
-    word dlt();
+    word erase(bnode &cur, const element &keyValue, const packing delType);
+    void drop(word curAddr, const int type);
 
 public:
     int bcnt[257];
@@ -74,14 +75,14 @@ public:
     //若找到记录，将其解析成node类，若未找到返回无效node
     node findRecordEntry(const hword dataFileAddr, const word rootAddr, const element &keyValue);
     //插入一组键值与记录的地址，根地址由本函数更新
-    int insertEntry(const hword dataFileAddr, attribute &attr, const element &keyValue, dword virtAddr);
+    int insertEntry(attribute &attr, const element &keyValue, dword virtAddr);
     //传入一个filter，删除filter中删除记录对应的索引信息
     //根地址由本函数更新
     int deleteEntry(const hword dataFileAddr, std::vector<attribute> &col, const filter &flt);
     //在对应的属性上创建索引
     int createEntry(const hword dataFileAddr, std::vector<attribute> &col, int pos);
     //删除对应属性上的索引
-    int dropEntry(const hword dataFileAddr, std::vector<attribute> &col, int pos);
+    int dropEntry(std::vector<attribute> &col, int pos);
 };
 
 extern IndexManager idxMgr;
