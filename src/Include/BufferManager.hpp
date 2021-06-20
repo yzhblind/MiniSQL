@@ -129,8 +129,8 @@ protected:
     int bufID, size;
 
 public:
-    node(BufferManager &origin, dword virtAddr = 0, void *phyAddr = NULL, int bufferID = -1, int size = 0) : origin(origin), virtAddr(virtAddr), phyAddr(phyAddr), size(size) {}
-    node(const node &src) : origin(src.origin) { virtAddr = src.virtAddr, phyAddr = src.phyAddr, bufID = src.bufID, size = size; }
+    node(BufferManager &origin, dword virtAddr = 0, void *phyAddr = NULL, int bufferID = -1, int size = 0) : origin(origin), virtAddr(virtAddr), phyAddr(phyAddr), bufID(bufferID), size(size) {}
+    node(const node &src) : origin(src.origin) { virtAddr = src.virtAddr, phyAddr = src.phyAddr, bufID = src.bufID, size = src.size; }
     //一组get函数，用于获取读写对象的元数据信息
     inline hword getFileAddr() const { return virtAddr >> 48; }
     inline hword getOffset() const { return virtAddr & 0xFFFF; }

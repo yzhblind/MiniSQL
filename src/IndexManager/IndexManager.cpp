@@ -2,6 +2,21 @@
 #include "Type.hpp"
 #include <cstring>
 
+bool operator<(const element &a, const element &b)
+{
+    switch (a.type)
+    {
+    case 0:
+        return *static_cast<int *>(a.ptr) < *static_cast<int *>(b.ptr);
+        break;
+    case 1:
+        return *static_cast<float *>(a.ptr) < *static_cast<float *>(b.ptr);
+        break;
+    default:
+        return strncmp(static_cast<char *>(a.ptr), static_cast<char *>(b.ptr), a.type) < 0;
+        break;
+    }
+}
 bool operator<=(const element &a, const element &b)
 {
     switch (a.type)
@@ -55,16 +70,16 @@ IndexManager::IndexManager()
     bnode::tmpMemory = new char[BufferManager::pageSize + 256];
 }
 IndexManager::~IndexManager() { delete[] static_cast<char *>(bnode::tmpMemory); }
-int bnode::binarySearch(const element &e)
+int bnode::binarySearch(const element &e, const bool lFlag)
 {
-    if (e <= getElement(getCnt() - 1, e.type))
+    if (lFlag ? e < getElement(getCnt() - 1, e.type) : e <= getElement(getCnt() - 1, e.type))
     {
         int l = 0, r = getCnt() - 1;
         int mid;
         while (l < r)
         {
             mid = (l + r) >> 1;
-            if (e <= getElement(mid, e.type))
+            if (lFlag ? e < getElement(mid, e.type) : e <= getElement(mid, e.type))
                 r = mid;
             else
                 l = mid + 1;
@@ -92,9 +107,9 @@ void *bnode::move(int start, int dir, int type, const packing packingType)
 //     *cnt += dir;
 //     return base + src;
 // }
-dword bnode::find(const element &key, const packing packingType, const bool equalFlag)
+dword bnode::find(const element &key, const packing packingType, const bool equalFlag, const bool lFlag)
 {
-    int idx = binarySearch(key);
+    int idx = binarySearch(key, lFlag);
     if (idx != getCnt() || (idx == getCnt() && packingType == PTR_DATA && equalFlag == false))
     {
         int offset = index2offset(idx, key.type);
@@ -248,11 +263,12 @@ element bnode::merge(bnode &par, bnode &src, int type)
     //int firstKey = index2offset(0, type);
     // int lastKey = index2offset(*cnt - 1, type);
     element key = getElement(getCnt() - 1, type);
+    int head = src.index2offset(0, type);
     if (*base == 0)
     {
         int dest = index2offset(*cnt, type);
         int end = index2offset(*src.cnt, type) + 6;
-        memcpy(base + dest, src.base, end);
+        memcpy(base + dest, src.base + head, end - head);
         *cnt += *src.cnt;
     }
     else
@@ -263,7 +279,7 @@ element bnode::merge(bnode &par, bnode &src, int type)
         endKey.cpy(parKey);
         int dest = index2offset(*cnt + 1, type);
         int end = index2offset(*src.cnt, type) + 6;
-        memcpy(base + dest, src.base, end);
+        memcpy(base + dest, src.base + head, end - head);
         *cnt += *src.cnt + 1;
     }
     src.deleteBlock();
@@ -276,7 +292,7 @@ word IndexManager::find(const word curAddr, const word parentAddr, const element
     if (cur.getBase() == 0)
         return curAddr;
     else
-        return find(extractBlockAddr(cur.find(keyValue)), curAddr, keyValue);
+        return find(extractBlockAddr(cur.find(keyValue, PTR_DATA, false, true)), curAddr, keyValue);
 }
 dword IndexManager::findAddrEntry(const hword dataFileAddr, const word rootAddr, const element &keyValue)
 {
@@ -362,19 +378,19 @@ word IndexManager::erase(bnode &cur, const element &keyValue, const packing delT
             tAddr = *reinterpret_cast<word *>(par.base + par.index2offset(idx + 1, type));
         bnode t(bufMgr.getBlock(indexFileAddr, tAddr));
         t.setParent(cur.getParent());
-        bnode &a = (idx == par.getCnt()) ? cur : t;
-        bnode &b = (idx == par.getCnt()) ? t : cur;
+        bnode &a = (idx == par.getCnt()) ? t : cur;
+        bnode &b = (idx == par.getCnt()) ? cur : t;
         if ((a.getBase() == 0 && a.getCnt() + b.getCnt() < bcnt[type]) || (a.getBase() == 1 && a.getCnt() + b.getCnt() < bcnt[type] - 1))
         {
             element key = a.merge(par, b, type);
-            return erase(a, key, DATA_PTR);
+            return erase(par, key, DATA_PTR);
         }
         else
             cur.splice(par, t, type);
     }
     return 0;
 }
-int IndexManager::deleteEntry(const hword dataFileAddr, std::vector<attribute> &col, const filter &flt)
+int IndexManager::deleteEntry(std::vector<attribute> &col, const filter &flt)
 {
     int keyStart = 0;
     for (auto &attr : col)

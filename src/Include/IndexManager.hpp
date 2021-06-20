@@ -26,7 +26,7 @@ private:
     inline int index2offset(int index, int type) { return 10 + (type2size(type) + 6) * index; };
     //使用时保证*cnt > 0
     //返回第一个大于等于e的元素的index
-    int binarySearch(const element &e);
+    int binarySearch(const element &e, const bool lFlag = false);
     void *move(int start, int dir, int type, const packing packingType = PTR_DATA);
     //void *rmove(int start, int dir, int type);
 
@@ -39,7 +39,7 @@ public:
     inline word getParent() { return *parent; }
     inline void setParent(word blockAddr) { *parent = blockAddr; }
     inline element getElement(int idx, int type) { return element(type, base + index2offset(idx, type) + 6); }
-    dword find(const element &key, const packing packingType = PTR_DATA, const bool equalFlag = false);
+    dword find(const element &key, const packing packingType = PTR_DATA, const bool equalFlag = false, const bool lFlag = false);
     //返回插入位置的index，需保证节点未满
     int insertKey(const element &key, const dword virtAddr, const packing packingType = PTR_DATA);
     int deleteKey(const element &key, const packing packingType = PTR_DATA);
@@ -79,7 +79,7 @@ public:
     int insertEntry(attribute &attr, const element &keyValue, dword virtAddr);
     //传入一个filter，删除filter中删除记录对应的索引信息
     //根地址由本函数更新
-    int deleteEntry(const hword dataFileAddr, std::vector<attribute> &col, const filter &flt);
+    int deleteEntry(std::vector<attribute> &col, const filter &flt);
     //在对应的属性上创建索引
     int createEntry(const hword dataFileAddr, std::vector<attribute> &col, int pos);
     //删除对应属性上的索引

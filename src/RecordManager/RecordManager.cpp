@@ -13,7 +13,7 @@ filter::filter(const std::vector<attribute> &origin) : origin(origin)
     // keyPos = -1;
     offset.push_back(0);
     for (int i = 1; i <= origin.size(); ++i)
-        offset.push_back(offset[i - 1] + type2size(origin[i].type));
+        offset.push_back(offset[i - 1] + type2size(origin[i - 1].type));
 }
 filter::~filter()
 {

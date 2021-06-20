@@ -14,9 +14,9 @@ void testCase1()
     hword dataAddr = bufMgr.openFile("test1.db", DATA, 10);
     hword indexAddr = bufMgr.openFile("index.db", INDEX);
     char s[10];
-    int num;
-    cin>>num;
-    for (int i = 0; i < num; ++i)
+    // int num;
+    // cin>>num;
+    for (int i = 0; i < 10; ++i)
     {
         sprintf(s, "%09d", i);
         s[9] = '\0';
@@ -25,6 +25,12 @@ void testCase1()
     idxMgr.setIndexFileAddr(indexAddr);
     idxMgr.createEntry(dataAddr, col, 0);
     cout << col[0].indexRootAddr << endl;
+    filter flt(col);
+    char val[10] = "000000002";
+    flt.addCond(condExpr(col, 0, E, val));
+    rcdMgr.deleteRecord(dataAddr, flt);
+    cout << flt.res.size() << endl;
+    idxMgr.deleteEntry(col, flt);
 }
 
 int main()

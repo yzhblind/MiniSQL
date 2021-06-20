@@ -285,6 +285,7 @@ int BufferManager::deleteBlock(const hword fileAddr, const word blockAddr)
         return FAILURE;
     int index = movBlock2Buffer(fileAddr, blockAddr);
     buf.dirty[index] = true;
+    // memset(buf.pool[index],0,pageSize);
     int *meta = static_cast<int *>(buf.pool[index]);
     *meta = file.nextFree[fileAddr];
     file.nextFree[fileAddr] = blockAddr;
