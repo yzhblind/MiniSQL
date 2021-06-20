@@ -2,6 +2,39 @@
 #include "Type.hpp"
 #include <cstring>
 
+bool operator<=(const element &a, const element &b)
+{
+    switch (a.type)
+    {
+    case 0:
+        return *static_cast<int *>(a.ptr) <= *static_cast<int *>(b.ptr);
+        break;
+    case 1:
+        return *static_cast<float *>(a.ptr) <= *static_cast<float *>(b.ptr);
+        break;
+    default:
+        return strncmp(static_cast<char *>(a.ptr), static_cast<char *>(b.ptr), a.type) <= 0;
+        break;
+    }
+}
+bool operator==(const element &a, const element &b)
+{
+    switch (a.type)
+    {
+    case 0:
+        return *static_cast<int *>(a.ptr) == *static_cast<int *>(b.ptr);
+        break;
+    case 1:
+        return *static_cast<float *>(a.ptr) == *static_cast<float *>(b.ptr);
+        break;
+    default:
+        return strncmp(static_cast<char *>(a.ptr), static_cast<char *>(b.ptr), a.type) == 0;
+        break;
+    }
+}
+
+void *bnode::tmpMemory = NULL;
+
 bnode::bnode(const node &src) : node(src)
 {
     origin.pinBlock(getFileAddr(), getBlockAddr(), PIN);
@@ -24,14 +57,14 @@ IndexManager::IndexManager()
 IndexManager::~IndexManager() { delete[] static_cast<char *>(bnode::tmpMemory); }
 int bnode::binarySearch(const element &e)
 {
-    if (e < element(e.type, base + index2offset(*cnt - 1, e.type) + 6))
+    if (e <= getElement(*cnt - 1, e.type))
     {
         int l = 0, r = *cnt - 1;
         int mid;
         while (l < r)
         {
             mid = (l + r) >> 1;
-            if (e <= element(e.type, base + index2offset(mid, e.type) + 6))
+            if (e <= getElement(mid, e.type))
                 r = mid;
             else
                 l = mid + 1;
@@ -62,15 +95,15 @@ void *bnode::move(int start, int dir, int type, const packing packingType)
 dword bnode::find(const element &key, const packing packingType)
 {
     int idx = binarySearch(key);
-    if (idx != *cnt)
+    if (idx != *cnt || (idx == *cnt && packingType == PTR_DATA))
     {
-        int offset = index2offset(key.type, idx);
-        if (key == element(key.type, base + offset + 6))
-        {
-            word blockAddr = *reinterpret_cast<word *>(base + offset + (packingType == PTR_DATA ? 0 : 6 + type2size(key.type)));
-            hword offsetAddr = *reinterpret_cast<hword *>(base + offset + 4 + (packingType == PTR_DATA ? 0 : 6 + type2size(key.type)));
-            return combileVirtAddr(getFileAddr(), blockAddr, offsetAddr);
-        }
+        int offset = index2offset(idx, key.type);
+        // if (key == element(key.type, base + offset + 6))
+        // {
+        word blockAddr = *reinterpret_cast<word *>(base + offset + (packingType == PTR_DATA ? 0 : 6 + type2size(key.type)));
+        hword offsetAddr = *reinterpret_cast<hword *>(base + offset + 4 + (packingType == PTR_DATA ? 0 : 6 + type2size(key.type)));
+        return combileVirtAddr(getFileAddr(), blockAddr, offsetAddr);
+        // }
     }
     return 0;
 }
@@ -78,12 +111,13 @@ int bnode::insertKey(const element &key, const dword virtAddr, const packing pac
 {
     //if (*cnt == idxMgr.bcnt[key.type] - 1)
     //    return FAILURE;
+    const int &type = key.type;
     int idx = (*cnt == 0) ? 0 : binarySearch(key);
     origin.setDirty(getFileAddr(), getBlockAddr());
-    char *p = static_cast<char *>(move(idx, 1, key.type, packingType));
-    *reinterpret_cast<word *>(p + (packingType == PTR_DATA ? 0 : type2size(key.type))) = extractBlockAddr(virtAddr);
-    *reinterpret_cast<hword *>(p + (packingType == PTR_DATA ? 0 : type2size(key.type)) + 4) = extractOffset(virtAddr);
-    element(key.type, p + (packingType == PTR_DATA ? 6 : 0)).cpy(key);
+    char *p = static_cast<char *>(move(idx, 1, type, packingType));
+    *reinterpret_cast<word *>(p + (packingType == PTR_DATA ? 0 : type2size(type))) = extractBlockAddr(virtAddr);
+    *reinterpret_cast<hword *>(p + (packingType == PTR_DATA ? 0 : type2size(type)) + 4) = extractOffset(virtAddr);
+    element(type, p + (packingType == PTR_DATA ? 6 : 0)).cpy(key);
     return idx;
 }
 int bnode::deleteKey(const element &key, const packing packingType)
@@ -91,7 +125,7 @@ int bnode::deleteKey(const element &key, const packing packingType)
     int idx = binarySearch(key);
     if (idx != *cnt)
     {
-        int offset = index2offset(key.type, idx) + 6;
+        int offset = index2offset(idx, key.type) + 6;
         // if (key == element(key.type, base + offset))
         // {
         origin.setDirty(getFileAddr(), getBlockAddr());
@@ -106,8 +140,7 @@ int bnode::replaceKey(const element &key, const element &newKey)
     int idx = binarySearch(key);
     if (idx != *cnt)
     {
-        int offset = index2offset(key.type, idx) + 6;
-        element &&t = element(key.type, base + offset);
+        element t = getElement(idx, key.type);
         if (key == t)
         {
             origin.setDirty(getFileAddr(), getBlockAddr());
@@ -122,6 +155,9 @@ bnode bnode::split(const element &key, const dword virtAddr)
     memcpy(tmpMemory, phyAddr, BufferManager::pageSize);
     void *phyAddrSave = phyAddr;
     phyAddr = tmpMemory;
+    base = reinterpret_cast<char *>(phyAddr);
+    parent = reinterpret_cast<word *>(base + 2);
+    cnt = reinterpret_cast<int *>(base + 6);
     insertKey(key, virtAddr, *base == 0 ? PTR_DATA : DATA_PTR);
     int lcnt = (*cnt + 1) / 2;
     int rcnt = *cnt - lcnt;
@@ -137,8 +173,11 @@ bnode bnode::split(const element &key, const dword virtAddr)
         *reinterpret_cast<word *>(base + src) = t.getBlockAddr();
     else
         --*cnt;
-    memcpy(phyAddrSave, phyAddr, src);
+    memcpy(phyAddrSave, phyAddr, src + 6);
     phyAddr = phyAddrSave;
+    base = reinterpret_cast<char *>(phyAddr);
+    parent = reinterpret_cast<word *>(base + 2);
+    cnt = reinterpret_cast<int *>(base + 6);
     return t;
 }
 int bnode::splice(bnode &par, bnode &src, int type)
@@ -147,15 +186,15 @@ int bnode::splice(bnode &par, bnode &src, int type)
     origin.setDirty(getFileAddr(), getBlockAddr());
     src.origin.setDirty(src.getFileAddr(), src.getBlockAddr());
     par.origin.setDirty(par.getFileAddr(), par.getBlockAddr());
-    if (element(type, src.base + index2offset(0, type) + 6) < element(type, base + index2offset(0, type) + 6))
+    if (src.getElement(0, type) <= getElement(0, type))
     {
-        int firstKey = index2offset(0, type);
-        int lastKey = index2offset(*src.cnt - 1, type);
-        element key = element(type, src.base + lastKey + 6);
+        // int firstKey = index2offset(0, type);
+        int lastKey = index2offset(src.getCnt() - 1, type);
+        element key = src.getElement(src.getCnt() - 1, type);
         dword virtAddr = combileVirtAddr(0, *reinterpret_cast<word *>(src.base + lastKey), *reinterpret_cast<hword *>(src.base + lastKey + 4));
         if (*base == 0)
         {
-            element oldKey(type, base + firstKey + 6);
+            element oldKey = getElement(0, type);
             par.replaceKey(oldKey, key);
             insertKey(key, virtAddr);
             src.move(*src.cnt, -1, type);
@@ -163,7 +202,7 @@ int bnode::splice(bnode &par, bnode &src, int type)
         else
         {
             int idx = par.binarySearch(key);
-            element parentKey(type, par.base + index2offset(idx, type) + 6);
+            element parentKey = par.getElement(idx, type);
             insertKey(parentKey, virtAddr);
             parentKey.cpy(key);
             --*src.cnt;
@@ -175,20 +214,20 @@ int bnode::splice(bnode &par, bnode &src, int type)
         dword virtAddr = combileVirtAddr(0, *reinterpret_cast<word *>(src.base + firstKey), *reinterpret_cast<hword *>(src.base + firstKey + 4));
         if (*base == 0)
         {
-            int secondKey = index2offset(1, type);
-            element oldKey = element(type, src.base + firstKey + 6);
-            element key = element(type, src.base + secondKey + 6);
+            // int secondKey = index2offset(1, type);
+            element oldKey = src.getElement(0, type);
+            element key = src.getElement(1, type);
             par.replaceKey(oldKey, key);
             insertKey(oldKey, virtAddr);
             src.move(1, -1, type);
         }
         else
         {
-            int lastKey = index2offset(*cnt - 1, type);
-            element pKey = element(type, base + lastKey + 6);
+            // int lastKey = index2offset(*cnt - 1, type);
+            element pKey = getElement(getCnt() - 1, type);
             int idx = par.binarySearch(pKey);
-            element parKey = element(type, par.base + index2offset(idx, type) + 6);
-            element key = element(type, src.base + firstKey + 6);
+            element parKey = par.getElement(idx, type);
+            element key = src.getElement(0, type);
             insertKey(parKey, virtAddr);
             parKey.cpy(key);
             src.move(1, -1, type);
@@ -201,8 +240,8 @@ element bnode::merge(bnode &par, bnode &src, int type)
     //bnode par(origin.getBlock(getFileAddr(), *parent));
     origin.setDirty(getFileAddr(), getBlockAddr());
     //int firstKey = index2offset(0, type);
-    int lastKey = index2offset(*cnt - 1, type);
-    element key = element(type, base + lastKey + 6);
+    // int lastKey = index2offset(*cnt - 1, type);
+    element key = getElement(getCnt() - 1, type);
     if (*base == 0)
     {
         int dest = index2offset(*cnt, type);
@@ -213,8 +252,8 @@ element bnode::merge(bnode &par, bnode &src, int type)
     else
     {
         int idx = par.binarySearch(key);
-        element parKey(type, par.base + index2offset(idx, type) + 6);
-        element endKey(type, base + index2offset(*cnt, type) + 6);
+        element parKey = par.getElement(idx, type);
+        element endKey = getElement(getCnt(), type);
         endKey.cpy(parKey);
         int dest = index2offset(*cnt + 1, type);
         int end = index2offset(*src.cnt, type) + 6;
@@ -238,7 +277,7 @@ dword IndexManager::findAddrEntry(const hword dataFileAddr, const word rootAddr,
     word leafAddr = find(rootAddr, 0, keyValue);
     bnode leaf(bufMgr.getBlock(indexFileAddr, leafAddr));
     dword res = leaf.find(keyValue);
-    return res > 0 ? combileVirtAddr(dataFileAddr, extractBlockAddr(res), extractOffset(res)) : 0;
+    return leaf.getElement(res, keyValue.type) == keyValue ? combileVirtAddr(dataFileAddr, extractBlockAddr(res), extractOffset(res)) : 0;
 }
 node IndexManager::findRecordEntry(const hword dataFileAddr, const word rootAddr, const element &keyValue)
 {
@@ -266,7 +305,7 @@ word IndexManager::insertInParent(bnode &cur, const element &key, const word add
     else
     {
         bnode t = p.split(key, combileVirtAddr(0, addr, 0));
-        element tKey(key.type, t.base + t.index2offset(0, key.type) + 6);
+        element tKey = t.getElement(0, key.type);
         return insertInParent(p, tKey, t.getBlockAddr());
     }
 }
@@ -281,7 +320,7 @@ int IndexManager::insertEntry(attribute &attr, const element &keyValue, dword vi
     else
     {
         bnode t = leaf.split(keyValue, virtAddr);
-        element key(type, t.base + t.index2offset(0, type) + 6);
+        element key = t.getElement(0, key.type);
         word tAddr = insertInParent(leaf, key, t.getBlockAddr());
         if (tAddr > 0)
             rootAddr = tAddr;
@@ -307,7 +346,7 @@ word IndexManager::erase(bnode &cur, const element &keyValue, const packing delT
     else if ((cur.getBase() == 0 && cur.getCnt() < bLeafMincnt[type]) || (cur.getBase() == 1 && cur.getCnt() < bInMincnt[type]))
     {
         bnode par(bufMgr.getBlock(indexFileAddr, cur.getParent()));
-        element searchKey(type, cur.base + cur.index2offset(cur.getCnt() - 1, type + 6));
+        element searchKey = cur.getElement(cur.getCnt() - 1, type);
         int idx = par.binarySearch(searchKey);
         word tAddr;
         if (idx == par.getCnt())
