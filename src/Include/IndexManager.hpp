@@ -39,7 +39,7 @@ public:
     inline word getParent() { return *parent; }
     inline void setParent(word blockAddr) { *parent = blockAddr; }
     inline element getElement(int idx, int type) { return element(type, base + index2offset(idx, type) + 6); }
-    dword find(const element &key, const packing packingType = PTR_DATA);
+    dword find(const element &key, const packing packingType = PTR_DATA, const bool equalFlag = false);
     //返回插入位置的index，需保证节点未满
     int insertKey(const element &key, const dword virtAddr, const packing packingType = PTR_DATA);
     int deleteKey(const element &key, const packing packingType = PTR_DATA);

@@ -92,17 +92,20 @@ void *bnode::move(int start, int dir, int type, const packing packingType)
 //     *cnt += dir;
 //     return base + src;
 // }
-dword bnode::find(const element &key, const packing packingType)
+dword bnode::find(const element &key, const packing packingType, const bool equalFlag)
 {
     int idx = binarySearch(key);
-    if (idx != getCnt() || (idx == getCnt() && packingType == PTR_DATA))
+    if (idx != getCnt() || (idx == getCnt() && packingType == PTR_DATA && equalFlag == false))
     {
         int offset = index2offset(idx, key.type);
         // if (key == element(key.type, base + offset + 6))
         // {
-        word blockAddr = *reinterpret_cast<word *>(base + offset + (packingType == PTR_DATA ? 0 : 6 + type2size(key.type)));
-        hword offsetAddr = *reinterpret_cast<hword *>(base + offset + 4 + (packingType == PTR_DATA ? 0 : 6 + type2size(key.type)));
-        return combileVirtAddr(getFileAddr(), blockAddr, offsetAddr);
+        if (equalFlag == false || (equalFlag == true && key == getElement(idx, key.type)))
+        {
+            word blockAddr = *reinterpret_cast<word *>(base + offset + (packingType == PTR_DATA ? 0 : 6 + type2size(key.type)));
+            hword offsetAddr = *reinterpret_cast<hword *>(base + offset + 4 + (packingType == PTR_DATA ? 0 : 6 + type2size(key.type)));
+            return combileVirtAddr(getFileAddr(), blockAddr, offsetAddr);
+        }
         // }
     }
     return 0;
@@ -279,8 +282,8 @@ dword IndexManager::findAddrEntry(const hword dataFileAddr, const word rootAddr,
 {
     word leafAddr = find(rootAddr, 0, keyValue);
     bnode leaf(bufMgr.getBlock(indexFileAddr, leafAddr));
-    dword res = leaf.find(keyValue);
-    return extractOffset(res) != 0 ? combileVirtAddr(dataFileAddr, extractBlockAddr(res), extractOffset(res)) : 0;
+    dword res = leaf.find(keyValue, PTR_DATA, true);
+    return res > 0 ? combileVirtAddr(dataFileAddr, extractBlockAddr(res), extractOffset(res)) : 0;
 }
 node IndexManager::findRecordEntry(const hword dataFileAddr, const word rootAddr, const element &keyValue)
 {
