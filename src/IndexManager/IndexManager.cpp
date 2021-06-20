@@ -57,9 +57,9 @@ IndexManager::IndexManager()
 IndexManager::~IndexManager() { delete[] static_cast<char *>(bnode::tmpMemory); }
 int bnode::binarySearch(const element &e)
 {
-    if (e <= getElement(*cnt - 1, e.type))
+    if (e <= getElement(getCnt() - 1, e.type))
     {
-        int l = 0, r = *cnt - 1;
+        int l = 0, r = getCnt() - 1;
         int mid;
         while (l < r)
         {
@@ -72,7 +72,7 @@ int bnode::binarySearch(const element &e)
         return r;
     }
     else
-        return *cnt;
+        return getCnt();
 }
 void *bnode::move(int start, int dir, int type, const packing packingType)
 {
@@ -95,7 +95,7 @@ void *bnode::move(int start, int dir, int type, const packing packingType)
 dword bnode::find(const element &key, const packing packingType)
 {
     int idx = binarySearch(key);
-    if (idx != *cnt || (idx == *cnt && packingType == PTR_DATA))
+    if (idx != getCnt() || (idx == getCnt() && packingType == PTR_DATA))
     {
         int offset = index2offset(idx, key.type);
         // if (key == element(key.type, base + offset + 6))
@@ -125,7 +125,7 @@ int bnode::deleteKey(const element &key, const packing packingType)
     int idx = binarySearch(key);
     if (idx != *cnt)
     {
-        int offset = index2offset(idx, key.type) + 6;
+        // int offset = index2offset(idx, key.type) + 6;
         // if (key == element(key.type, base + offset))
         // {
         origin.setDirty(getFileAddr(), getBlockAddr());
@@ -170,10 +170,13 @@ bnode bnode::split(const element &key, const dword virtAddr)
     memcpy(t.base + dest, base + src, end - src);
     t.origin.setDirty(t.getFileAddr(), t.getBlockAddr());
     if (*base == 0)
+    {
         *reinterpret_cast<word *>(base + src) = t.getBlockAddr();
+        *reinterpret_cast<hword *>(base + src + 4) = 0;
+    }
     else
         --*cnt;
-    memcpy(phyAddrSave, phyAddr, src + 6);
+    memcpy(phyAddrSave, phyAddr, src + 6 + type2size(key.type));
     phyAddr = phyAddrSave;
     base = reinterpret_cast<char *>(phyAddr);
     parent = reinterpret_cast<word *>(base + 2);
@@ -277,7 +280,7 @@ dword IndexManager::findAddrEntry(const hword dataFileAddr, const word rootAddr,
     word leafAddr = find(rootAddr, 0, keyValue);
     bnode leaf(bufMgr.getBlock(indexFileAddr, leafAddr));
     dword res = leaf.find(keyValue);
-    return leaf.getElement(res, keyValue.type) == keyValue ? combileVirtAddr(dataFileAddr, extractBlockAddr(res), extractOffset(res)) : 0;
+    return extractOffset(res) != 0 ? combileVirtAddr(dataFileAddr, extractBlockAddr(res), extractOffset(res)) : 0;
 }
 node IndexManager::findRecordEntry(const hword dataFileAddr, const word rootAddr, const element &keyValue)
 {
@@ -305,7 +308,8 @@ word IndexManager::insertInParent(bnode &cur, const element &key, const word add
     else
     {
         bnode t = p.split(key, combileVirtAddr(0, addr, 0));
-        element tKey = t.getElement(0, key.type);
+        // element tKey = t.getElement(0, key.type);
+        element tKey = p.getElement(p.getCnt(), key.type);
         return insertInParent(p, tKey, t.getBlockAddr());
     }
 }
@@ -320,7 +324,7 @@ int IndexManager::insertEntry(attribute &attr, const element &keyValue, dword vi
     else
     {
         bnode t = leaf.split(keyValue, virtAddr);
-        element key = t.getElement(0, key.type);
+        element key = t.getElement(0, type);
         word tAddr = insertInParent(leaf, key, t.getBlockAddr());
         if (tAddr > 0)
             rootAddr = tAddr;

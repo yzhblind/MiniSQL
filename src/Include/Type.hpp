@@ -85,6 +85,7 @@ struct element
     int type;
     void *ptr;
     element(int type, void *ptr) : type(type), ptr(ptr) {}
+    element(const element &src) : type(src.type), ptr(src.ptr) {}
     void cpy(const element &src) { memcpy(ptr, src.ptr, type2size(type)); }
     friend bool operator<(const element &a, const element &b);
     friend bool operator==(const element &a, const element &b);
