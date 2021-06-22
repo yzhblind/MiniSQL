@@ -1,21 +1,19 @@
 #include "RecordManager.hpp"
+#include "Type.hpp"
 #include <cstring>
-
-static inline hword extractFileAddr(dword virtAddr) { return virtAddr >> 48; }
-static inline hword extractOffset(dword virtAddr) { return virtAddr & 0xFFFF; }
-static inline word extractBlockAddr(dword virtAddr) { return (virtAddr >> 16) & 0xFFFFFFFF; }
 
 const void *condExpr::copyVal(const std::vector<attribute> &origin, const int pos, const void *val)
 {
-    void *res = origin[pos].type <= 1 ? new char[4] : new char[origin[pos].type];
-    return memcpy(res, val, origin[pos].type <= 1 ? 4 : origin[pos].type);
+    void *res = new char[type2size(origin[pos].type)];
+    return memcpy(res, val, type2size(origin[pos].type));
 }
 
 filter::filter(const std::vector<attribute> &origin) : origin(origin)
 {
+    // keyPos = -1;
     offset.push_back(0);
     for (int i = 1; i <= origin.size(); ++i)
-        offset.push_back(offset[i - 1] + (origin[i].type <= 1 ? 4 : origin[i].type));
+        offset.push_back(offset[i - 1] + type2size(origin[i - 1].type));
 }
 filter::~filter()
 {
@@ -94,14 +92,17 @@ int filter::push(void *record, dword vAddr, bool delFlag)
     for (int i = 0; i < cond.size(); ++i)
         if (check(cond[i], record) == false)
             return FAILURE;
-    if (!delFlag)
-    {
-        char *p = new char[*offset.rbegin()];
-        memcpy(p, record, *offset.rbegin());
-        res.push_back(p);
-    }
-    if (delFlag)
+    char *p = new char[*offset.rbegin()];
+    memcpy(p, record, *offset.rbegin());
+    res.push_back(p);
+    if (delFlag == true)
         resAddr.push_back(vAddr);
+    // if (keyPos >= 0 && keyPos < origin.size())
+    // {
+    //     char *p = new char[type2size(origin[keyPos].type)];
+    //     memcpy(p, static_cast<char *>(record) + offset[keyPos], type2size(origin[keyPos].type));
+    //     res.push_back(p);
+    // }
     return SUCCESS;
 }
 bool RecordManager::uniqueCheck(hword fileAddr, void *data, const std::vector<attribute> &origin)
@@ -117,7 +118,7 @@ bool RecordManager::uniqueCheck(hword fileAddr, void *data, const std::vector<at
     offset.clear();
     offset.push_back(0);
     for (int i = 1; i < origin.size(); ++i)
-        offset.push_back(offset[i - 1] + (origin[i].type <= 1 ? 4 : origin[i].type));
+        offset.push_back(offset[i - 1] + type2size(origin[i].type));
     int blockNum = bufMgr.getBlockNumber(fileAddr);
     int rSize = bufMgr.getRecordSize(fileAddr);
     char *record = new char[rSize + 1];
@@ -130,7 +131,7 @@ bool RecordManager::uniqueCheck(hword fileAddr, void *data, const std::vector<at
             t.read(record, i, rSize + 1);
             if (*record == true)
                 for (int j = 0; j < index2check.size(); ++j)
-                    if (strncmp(static_cast<char *>(data) + 1 + offset[index2check[j]], record + 1 + offset[index2check[j]], origin[index2check[j]].type <= 1 ? 4 : origin[index2check[j]].type) == 0)
+                    if (strncmp(static_cast<char *>(data) + 1 + offset[index2check[j]], record + 1 + offset[index2check[j]], type2size(origin[index2check[j]].type)) == 0)
                     {
                         delete[] record;
                         return false;
@@ -140,16 +141,18 @@ bool RecordManager::uniqueCheck(hword fileAddr, void *data, const std::vector<at
     delete[] record;
     return true;
 }
-int RecordManager::insertRecord(hword fileAddr, void *data, const std::vector<attribute> &origin)
+dword RecordManager::insertRecord(hword fileAddr, void *data, const std::vector<attribute> &origin)
 {
     int blockAddr = bufMgr.getNextFreeAddr(fileAddr);
     if (blockAddr > 0)
         bufMgr.pinBlock(fileAddr, blockAddr, PIN);
-    int ret = FAILURE;
+    //int ret = FAILURE;
+    dword ret = 0;
     if (uniqueCheck(fileAddr, data, origin))
     {
         node wrt = bufMgr.getNextFree(fileAddr);
-        ret = wrt.write(data, 0, wrt.getSize());
+        wrt.write(data, 0, wrt.getSize());
+        ret = wrt.getVirtAddr();
     }
     if (blockAddr > 0)
         bufMgr.pinBlock(fileAddr, blockAddr, UNPIN);
@@ -159,7 +162,7 @@ int RecordManager::deleteRecord(hword fileAddr, filter &flt)
 {
     int blockNum = bufMgr.getBlockNumber(fileAddr);
     int rSize = bufMgr.getRecordSize(fileAddr);
-    if (blockNum == -1 || rSize == -1)
+    if (blockNum == FAILURE || rSize == FAILURE)
         return FAILURE;
     char *record = new char[rSize + 1];
     for (int i = 1; i < blockNum; ++i)
@@ -182,7 +185,7 @@ int RecordManager::selectRecord(hword fileAddr, filter &flt)
 {
     int blockNum = bufMgr.getBlockNumber(fileAddr);
     int rSize = bufMgr.getRecordSize(fileAddr);
-    if (blockNum == -1 || rSize == -1)
+    if (blockNum == FAILURE || rSize == FAILURE)
         return FAILURE;
     char *record = new char[rSize + 1];
     for (int i = 1; i < blockNum; ++i)

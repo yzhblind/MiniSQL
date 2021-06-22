@@ -8,12 +8,7 @@
 #include <algorithm>
 #include <unordered_map>
 
-#define SUCCESS 0
-#define FAILURE -1
-
-typedef unsigned short int hword;
-typedef unsigned int word;
-typedef unsigned long long dword;
+#include "Type.hpp"
 
 enum fileType
 {
@@ -70,9 +65,27 @@ public:
     static const long long pageSize;
     BufferManager();
     ~BufferManager();
-    inline int getBlockNumber (const hword fileAddr) const { if (notValidAddr(fileAddr)) return FAILURE; else return file.blockNum[fileAddr]; }
-    inline int getRecordSize  (const hword fileAddr) const { if (notValidAddr(fileAddr)) return FAILURE; else return file.recordSize[fileAddr] - 1; }
-    inline int getNextFreeAddr(const hword fileAddr) const { if (notValidAddr(fileAddr)) return FAILURE; else return file.nextFree[fileAddr]; }
+    inline int getBlockNumber(const hword fileAddr) const
+    {
+        if (notValidAddr(fileAddr))
+            return FAILURE;
+        else
+            return file.blockNum[fileAddr];
+    }
+    inline int getRecordSize(const hword fileAddr) const
+    {
+        if (notValidAddr(fileAddr))
+            return FAILURE;
+        else
+            return file.recordSize[fileAddr] - 1;
+    }
+    inline int getNextFreeAddr(const hword fileAddr) const
+    {
+        if (notValidAddr(fileAddr))
+            return FAILURE;
+        else
+            return file.nextFree[fileAddr];
+    }
     //按照filename打开文件，若成功返回打开文件的fileAddr，失败则返回FAILURE
     //若文件类型为DATA，则recordSize最小为2字节，其他类型的文件请让recordSize保持默认
     //本函数的recordSize参数表示纯记录大小，DATA文件中将在记录首部追加一字节的valid位
@@ -109,14 +122,15 @@ public:
 //若类失效，请使用BufferManager函数重新获取
 class node
 {
-private:
+protected:
     BufferManager &origin;
     dword virtAddr;
     void *phyAddr;
     int bufID, size;
 
 public:
-    node(BufferManager &origin, dword virtAddr = 0, void *phyAddr = NULL, int bufferID = -1, int size = 0) : origin(origin), virtAddr(virtAddr), phyAddr(phyAddr), size(size){};
+    node(BufferManager &origin, dword virtAddr = 0, void *phyAddr = NULL, int bufferID = -1, int size = 0) : origin(origin), virtAddr(virtAddr), phyAddr(phyAddr), bufID(bufferID), size(size) {}
+    node(const node &src) : origin(src.origin) { virtAddr = src.virtAddr, phyAddr = src.phyAddr, bufID = src.bufID, size = src.size; }
     //一组get函数，用于获取读写对象的元数据信息
     inline hword getFileAddr() const { return virtAddr >> 48; }
     inline hword getOffset() const { return virtAddr & 0xFFFF; }
