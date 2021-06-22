@@ -77,6 +77,7 @@ public:
     inline int getOffset(int pos) { return offset[pos]; }
     inline int getSize() { return *offset.rbegin(); }
     int addCond(const condExpr &c);
+    int push(const node &in);
     int push(void *record, dword vAddr, bool delFlag = false);
     // inline void setKeyPos(int pos) { keyPos = pos; }
 };
