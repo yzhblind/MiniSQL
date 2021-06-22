@@ -28,7 +28,7 @@ add_library(Interpreter ${INTERPRETER_SRC_FILE})
 add_library(Record ${RECORD_SRC_FILE})
 
 add_executable(${PROJECT_NAME}
-    ${MINISQL_SRC}/testIndex.cpp
+    ${MINISQL_SRC}/main.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}
