@@ -92,8 +92,8 @@ int filter::push(void *record, dword vAddr, bool delFlag)
     for (int i = 0; i < cond.size(); ++i)
         if (check(cond[i], record) == false)
             return FAILURE;
-    char *p = new char[*offset.rbegin()];
-    memcpy(p, record, *offset.rbegin());
+    char *p = new char[getSize()];
+    memcpy(p, record, getSize());
     res.push_back(p);
     if (delFlag == true)
         resAddr.push_back(vAddr);
@@ -103,6 +103,17 @@ int filter::push(void *record, dword vAddr, bool delFlag)
     //     memcpy(p, static_cast<char *>(record) + offset[keyPos], type2size(origin[keyPos].type));
     //     res.push_back(p);
     // }
+    return SUCCESS;
+}
+int filter::push(const node &in)
+{
+    char *p = new char[getSize()];
+    if (in.read(p, 0, getSize()) == FAILURE)
+        return FAILURE;
+    for (int i = 0; i < cond.size(); ++i)
+        if (check(cond[i], p) == false)
+            return FAILURE;
+    res.push_back(p);
     return SUCCESS;
 }
 bool RecordManager::uniqueCheck(hword fileAddr, void *data, const std::vector<attribute> &origin)
@@ -181,6 +192,7 @@ int RecordManager::deleteRecord(hword fileAddr, filter &flt)
         bufMgr.deleteRecord(extractFileAddr(flt.resAddr[i]), extractBlockAddr(flt.resAddr[i]), extractOffset(flt.resAddr[i]));
     return SUCCESS;
 }
+int RecordManager::deleteRecord(dword virtAddr) { return bufMgr.deleteRecord(extractFileAddr(virtAddr), extractBlockAddr(virtAddr), extractOffset(virtAddr)); }
 int RecordManager::selectRecord(hword fileAddr, filter &flt)
 {
     int blockNum = bufMgr.getBlockNumber(fileAddr);
@@ -196,10 +208,15 @@ int RecordManager::selectRecord(hword fileAddr, filter &flt)
         {
             t.read(record, offset, rSize + 1);
             if (*record == true)
-                flt.push(record + 1, t.getVirtAddr() + offset);
+                flt.push(record + 1, 0); //选择时不关心virtAddr
         }
     }
     return SUCCESS;
+}
+int RecordManager::getRecord(dword virtAddr, filter &flt)
+{
+    node t = bufMgr.getRecord(extractFileAddr(virtAddr), extractBlockAddr(virtAddr), extractOffset(virtAddr));
+    return flt.push(t);
 }
 
 RecordManager rcdMgr;
