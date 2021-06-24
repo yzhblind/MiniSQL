@@ -18,7 +18,8 @@ enum inst_code {
 	index,
 	int_type,
 	flt_type,
-	str_type
+	str_type,
+	prmy_key
 };
 
 const static unordered_map<string, int> trans{
@@ -33,7 +34,8 @@ const static unordered_map<string, int> trans{
 	{"index",	index	},
 	{"int",		int_type},
 	{"float",	flt_type},
-	{"char",	str_type}
+	{"char",	str_type},
+	{"key",		prmy_key}
 };
 
 const static unordered_map<string, int> optrans{
