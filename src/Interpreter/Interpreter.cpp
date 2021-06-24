@@ -8,6 +8,8 @@
 
 using namespace std;
 
+
+
 inst_reader::inst_reader() {
 	char tmp;
 	cout << "Please give your order after '>'" << endl;
@@ -172,10 +174,13 @@ int inst_reader::translate() {
 			if (check_comp(str, "table"))return -1;
 			else {												//检查和记录各列的名称，类型，主键
 				news.tableName = str;	//表名
+				int singleP = 0;		//单主键检查（0:不存在主键；1:已有一个主键）
+				int prmode = 0;			//主键设置模式
+				int k;
 				char tmp;
 				if (scan(i, tmp) == -1)return -1;
 				stringstream ss,line;
-				while ((tmp = i.get()) != -1) {					//化去括号
+				while ((tmp = i.get()) != -1) {					//化括号为空格 便于读入
 					if (tmp == '(' || tmp == ')') {
 						ss << " ";
 					}
@@ -184,12 +189,29 @@ int inst_reader::translate() {
 				while ((tmp = ss.get()) != -1) {
 					if (tmp == ',') {
 						line >> str;
-						if (str != "int" || str != "char" || str != "float") {
-							cout << "Error: illegal format for attribute to be created" << endl;
+						if (str == "primary") {
+							if (!singleP) {
+								prmode = 1;
+								singleP = 1;
+							}
+							else {
+								cout << "Error: not supporting multiply primary key" << endl;
+								return -1;
+							}
 						}
-						tmp_att.attrName = str;
-						tmp_att.isUnique = false;
+						else {
+							tmp_att.attrName = str;
+							tmp_att.isUnique = false;
+						}
 						line >> str;
+						if ( prmode == 0 && ( str != "int" || str != "char" || str != "float" )) {
+							cout << "Error: illegal format for attribute to be created" << endl;
+							return -1;
+						}
+						else if (prmode == 1 && str != "key") {
+							cout << "Error: illegal format for primary key definition" << endl;
+							return -1;
+						}
 						switch (trans.count(str) ? trans.at(str) : -1) {
 						case int_type:
 							tmp_att.type = 0;
@@ -231,21 +253,48 @@ int inst_reader::translate() {
 								return -1;
 							}
 						}
+						case prmy_key: {
+							line >> str;
+							int sz = news.column.size(), iffound = 0;
+							for (k = 0; k < sz; k++) {						//检查定义为主键的列是否存在
+								if (news.column.at(k).attrName == str) {
+									iffound = 1;
+									break;
+								}
+							}
+							if (iffound == 0) {
+								cout << "Error: lack of attribute name for primary key definition" << endl;
+								return -1;
+							}
+							line >> check;
+							if (check == "") {
+								cout << "Error: illegal attribute name for primary key definition" << endl;
+								return -1;
+							}
+						}
 						default:
-							cout << "Error: illegal type define for attribute" << endl;
+							cout << "Error: illegal type definition or primary key definition for attribute" << endl;
 							return -1;
 						}
 
-						news.column.push_back(tmp_att);
-
+						if (!prmode) news.column.push_back(tmp_att);
+						else {
+							prmode = 0;
+							//主键设置
+							news.primaryKey = k;
+						}
 						line.clear();
 						line.str("");
 					}
 					else line << tmp;
 				}
-				cout << "crt table " << str << endl;			//测试用输出语句
+				if (singleP == 0) {
+					cout << "Error: lack of primary key definition for create table" << endl;
+					return -1;
+				}
+				//SQL_create(news);
+				//cout << "crt table " << str << endl;			测试用输出语句
 			}
-			//SQL_create(news);
 			break; 
 		}
 		case index: {											//create index
@@ -539,20 +588,22 @@ int inst_reader::translate() {
 					case 0: {
 						ss << str;
 						ss >> int_val;
-						//condExpr c(attr, pos, tmpOP, &int_val);
-						//conditions.push_back(c);
+						condExpr c(attr, pos, tmpOP, &int_val);
+						conditions.push_back(c);
 						break; 
 					}
-					case 1:
+					case 1: {
 						ss << str;
 						ss >> flo_val;
-						//condExpr c(attr, pos, tmpOP, &flo_val);
-						//conditions.push_back(c);
+						condExpr c(attr, pos, tmpOP, &flo_val);
+						conditions.push_back(c);
 						break;
-					default:
+					}
+					default: {
 						str_val = str.substr(1, str.size() - 2);
-						//condExpr c(attr, pos, tmpOP, &str_val);
-						//conditions.push_back(c);
+						condExpr c(attr, pos, tmpOP, &str_val);
+						conditions.push_back(c);
+					}
 					}
 					ss.str("");
 					ss.clear();
