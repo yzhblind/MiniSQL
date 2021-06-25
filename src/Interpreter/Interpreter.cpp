@@ -1,7 +1,7 @@
 ﻿#include <iostream>
 #include <fstream>
 #include <cstring>
-#include "interpreter.hpp"
+#include "Interpreter.hpp"
 #include "Type.hpp"					//create
 #include "CatalogManager.hpp"		//insert
 #include "RecordManager.hpp"		//select
