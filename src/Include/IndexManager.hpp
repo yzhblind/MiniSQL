@@ -8,6 +8,9 @@
 // 6字节ptr和定长keyValue共n-1组
 // 6字节ptr
 
+//用于指定函数执行时的打包方式
+//PTR_DATA表示将key与左侧指针打包视作整体理解
+//DATA_PTR表示将key与右侧指针打包视作整体理解
 enum packing
 {
     PTR_DATA,
@@ -23,21 +26,36 @@ private:
     char *base;
     word *parent;
     int *cnt;
+    //计算相应index的key左侧6字节指针的首地址
     inline int index2offset(int index, int type) { return 10 + (type2size(type) + 6) * index; };
     //使用时保证*cnt > 0
-    //返回第一个大于等于e的元素的index
+    //默认返回第一个大于等于e的元素的index
+    //lFlag表示less flag，指定为true后将返回第一个大于e的元素的index
     int binarySearch(const element &e, const bool lFlag = false);
+    //按照packingType将B+树节点内部的key与指针打包，每个包的index取决于包内key的index
+    //然后move函数执行将第start个包移动dir(可正可负)个包的位置
+    //返回被移动的start包的首地址
     void *move(int start, int dir, int type, const packing packingType = PTR_DATA);
     //void *rmove(int start, int dir, int type);
 
 public:
+    //允许友元类IndexManager直接操作节点内的私有成员
     friend class IndexManager;
+    //构造函数，一个B+树节点由一个Buffer块构造而来
+    //构造为B+树节点的Buffer块将PIN在内存中，不会被替换出去
     bnode(const node &src);
+    //析构，UNPIN构造本节点的块
     ~bnode();
+    //获取是否是叶节点
     inline int getBase() { return *base; }
+    //获取节点内key的数量
     inline int getCnt() { return *cnt; }
+    //获取父亲节点的块地址
     inline word getParent() { return *parent; }
+    //修改父亲节点
     inline void setParent(word blockAddr) { *parent = blockAddr; }
+    //将当前节点内的第idx个key的指针打包成element
+    //若块内发生move或者其他改变节点内容的操作，继续使用element可能导致不一致状态
     inline element getElement(int idx, int type) { return element(type, base + index2offset(idx, type) + 6); }
     dword find(const element &key, const packing packingType = PTR_DATA, const bool equalFlag = false, const bool lFlag = false);
     //返回插入位置的index，需保证节点未满

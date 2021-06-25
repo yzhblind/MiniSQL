@@ -1,7 +1,8 @@
 #include "IndexManager.hpp"
 #include "Type.hpp"
 #include <cstring>
-
+//判断元素a所指向的元素是否小于b所指向的元素
+//不进行类型检查，类型解释依赖元素a
 bool operator<(const element &a, const element &b)
 {
     switch (a.type)
@@ -17,6 +18,8 @@ bool operator<(const element &a, const element &b)
         break;
     }
 }
+//判断元素a所指向的元素是否小于等于b所指向的元素
+//不进行类型检查，类型解释依赖元素a
 bool operator<=(const element &a, const element &b)
 {
     switch (a.type)
@@ -32,6 +35,8 @@ bool operator<=(const element &a, const element &b)
         break;
     }
 }
+//判断元素a所指向的元素是否等于b所指向的元素
+//不进行类型检查，类型解释依赖元素a
 bool operator==(const element &a, const element &b)
 {
     switch (a.type)
@@ -47,7 +52,9 @@ bool operator==(const element &a, const element &b)
         break;
     }
 }
-
+//所有的bnode共有一块临时内存，大小=页大小+最大类型大小
+//于IndexManager构造时申请，于其析构时释放
+//用于存储临时超过节点限制的B+树待分裂节点
 void *bnode::tmpMemory = NULL;
 
 bnode::bnode(const node &src) : node(src)
