@@ -20,17 +20,23 @@ file(GLOB INDEX_SRC_FILE ${INDEX_SRC}/*.cpp)
 file(GLOB INTERPRETER_SRC_FILE ${INTERPRETER_SRC}/*.cpp)
 file(GLOB RECORD_SRC_FILE ${RECORD_SRC}/*.cpp)
 
-add_library(API ${API_SRC_FILE})
-add_library(Buffer ${BUFFER_SRC_FILE})
-add_library(Catalog ${CATALOG_SRC_FILE})
-add_library(Index ${INDEX_SRC_FILE})
-add_library(Interpreter ${INTERPRETER_SRC_FILE})
-add_library(Record ${RECORD_SRC_FILE})
+#add_library(API ${API_SRC_FILE})
+#add_library(Buffer ${BUFFER_SRC_FILE})
+#add_library(Catalog ${CATALOG_SRC_FILE})
+#add_library(Index ${INDEX_SRC_FILE})
+#add_library(Interpreter ${INTERPRETER_SRC_FILE})
+#add_library(Record ${RECORD_SRC_FILE})
 
 add_executable(${PROJECT_NAME}
     ${MINISQL_SRC}/main.cpp
+    ${API_SRC_FILE}
+    ${BUFFER_SRC_FILE}
+    ${CATALOG_SRC_FILE}
+    ${INDEX_SRC_FILE}
+    ${INTERPRETER_SRC_FILE}
+    ${RECORD_SRC_FILE}
 )
 
-target_link_libraries(${PROJECT_NAME}
-    Buffer Catalog Index Record API Interpreter
-)
+#target_link_libraries(${PROJECT_NAME}
+#    Buffer Index Record Catalog API Interpreter
+#)
