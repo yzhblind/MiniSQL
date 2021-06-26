@@ -63,9 +63,12 @@ public:
     // 本find函数用于获取节点内部的指针
     // 若lFlag为true，找到第一个大于key的元素；若为false，找到第一个大于等于key的元素
     // 根据equalFlag决定元素是否需要与key做相等的比较
+    // 根据packingType返回元素包内指针解析成的地址，文件地址填充Index文件地址
     dword find(const element &key, const packing packingType = PTR_DATA, const bool equalFlag = false, const bool lFlag = false);
-    // 返回插入位置的index，需保证节点未满
+    // 返回插入位置的index，内部不做检查，需保证节点未满
+    // 传入的地址中的块地址与偏移地址将解析为指针与key按packingType打包存储
     int insertKey(const element &key, const dword virtAddr, const packing packingType = PTR_DATA);
+    
     int deleteKey(const element &key, const packing packingType = PTR_DATA);
     int replaceKey(const element &key, const element &newKey);
     bnode split(const element &key, const dword virtAddr);

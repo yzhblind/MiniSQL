@@ -117,8 +117,6 @@ dword bnode::find(const element &key, const packing packingType, const bool equa
     int idx = binarySearch(key, lFlag);
     if (idx != getCnt() || (idx == getCnt() && packingType == PTR_DATA && equalFlag == false))
     {
-        // if (key == element(key.type, base + offset + 6))
-        // {
         if (equalFlag == false || (equalFlag == true && key == getElement(idx, key.type)))
         {
             int offset = index2offset(idx, key.type);
@@ -126,17 +124,21 @@ dword bnode::find(const element &key, const packing packingType, const bool equa
             hword offsetAddr = *reinterpret_cast<hword *>(base + offset + 4 + (packingType == PTR_DATA ? 0 : 6 + type2size(key.type)));
             return combileVirtAddr(getFileAddr(), blockAddr, offsetAddr);
         }
-        // }
     }
     return 0;
 }
 int bnode::insertKey(const element &key, const dword virtAddr, const packing packingType)
 {
-    //if (*cnt == idxMgr.bcnt[key.type] - 1)
-    //    return FAILURE;
+    /*
+    if (*cnt == idxMgr.bcnt[key.type] - 1)
+        return FAILURE;
+    */
     const int &type = key.type;
-    int idx = (*cnt == 0) ? 0 : binarySearch(key);
+    // 节点内不存在key的情况二分搜索会产生越界，提前判断插入位置序号为0
+    int idx = (getCnt() == 0) ? 0 : binarySearch(key);
+    // 节点发生修改，需要设置dirty保证修改持久化到硬盘
     origin.setDirty(getFileAddr(), getBlockAddr());
+    // 移动元素得到空余的插入区域
     char *p = static_cast<char *>(move(idx, 1, type, packingType));
     *reinterpret_cast<word *>(p + (packingType == PTR_DATA ? 0 : type2size(type))) = extractBlockAddr(virtAddr);
     *reinterpret_cast<hword *>(p + (packingType == PTR_DATA ? 0 : type2size(type)) + 4) = extractOffset(virtAddr);
@@ -146,22 +148,22 @@ int bnode::insertKey(const element &key, const dword virtAddr, const packing pac
 int bnode::deleteKey(const element &key, const packing packingType)
 {
     int idx = binarySearch(key);
-    if (idx != *cnt)
+    if (idx != getCnt())
     {
-        // int offset = index2offset(idx, key.type) + 6;
-        // if (key == element(key.type, base + offset))
-        // {
+        /*
+        int offset = index2offset(idx, key.type) + 6;
+        if (key == element(key.type, base + offset)) {}
+        */
         origin.setDirty(getFileAddr(), getBlockAddr());
         move(idx + 1, -1, key.type, packingType);
         return idx;
-        // }
     }
     return FAILURE;
 }
 int bnode::replaceKey(const element &key, const element &newKey)
 {
     int idx = binarySearch(key);
-    if (idx != *cnt)
+    if (idx != getCnt())
     {
         element t = getElement(idx, key.type);
         if (key == t)
