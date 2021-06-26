@@ -1,5 +1,6 @@
 #include "Interpreter.hpp"
-
+#include "BufferManager.hpp"
+#include "CatalogManager.hpp"
 
 int main() {
 	inst_reader in;

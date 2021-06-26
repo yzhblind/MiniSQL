@@ -1,4 +1,3 @@
-#include "BufferManager.hpp"
 #include "CatalogManager.hpp"
 
 #include <sstream>
@@ -105,6 +104,7 @@ int CatalogManager::endCata()
         schemaBlock.write(writeBuff, 0, BufferManager::pageSize);
         blockCNT++;
     }
+    return SUCCESS;
 }
 
 int CatalogManager::addSchema(std::string tableName, std::vector<attribute>& column, int primaryKey)
@@ -121,6 +121,8 @@ int CatalogManager::addSchema(std::string tableName, std::vector<attribute>& col
     tmpSchema.fileAddr = bufMgr.openFile(tableName, DATA, recordSize);
     ctgMgr.schemas.push_back(tmpSchema);
     ctgMgr.schemaIndex[tableName] = ctgMgr.schemas.size() - 1;
+
+    return SUCCESS;
 }
 
 int CatalogManager::dropSchema(std::string& tableName)
@@ -129,6 +131,7 @@ int CatalogManager::dropSchema(std::string& tableName)
         return FAILURE;
     ctgMgr.schemas.erase(ctgMgr.schemas.begin() + ctgMgr.schemaIndex[tableName]);
     ctgMgr.schemaIndex.erase(tableName);
+    return SUCCESS;
 }
 
 std::vector<attribute>& CatalogManager::getColumn(std::string& scheName)
@@ -152,3 +155,5 @@ int CatalogManager::getColumnAddr(std::string& tableName, std::string& attrName)
 {
     return ctgMgr.schemas[ctgMgr.schemaIndex[tableName]].attributeIndex[attrName];
 }
+
+CatalogManager ctgMgr;

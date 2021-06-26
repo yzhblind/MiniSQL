@@ -372,7 +372,7 @@ int inst_reader::translate()
 			}
 			break;
 		}
-		case index:
+		case indx:
 		{ //create index
 			char tmp;
 			string indexName, tableName, attrName;
@@ -424,7 +424,7 @@ int inst_reader::translate()
 				cout << "drop table " << str << endl;
 			}
 			break;
-		case index:		//drop index
+		case indx:		//drop index
 			i >> str;	//str此处指代indexName
 			i >> check; //检查是否有多余字符串
 			if (check != "" || str.find(',') != str.npos || str == "")
@@ -442,7 +442,7 @@ int inst_reader::translate()
 			cout << "Error: no such command\n";
 		}
 		break;
-	case select:
+	case slct:
 	{
 		string tableName;
 		i >> str;
