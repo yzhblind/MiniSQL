@@ -215,6 +215,11 @@ int inst_reader::translate()
 			i >> str;
 			if (check_comp(str, "table"))
 				return -1;
+			else if(API_check_schema(str))
+			{
+				cout << "Error: this table has already been created before" << endl;
+				return -1;
+			}
 			else
 			{						  //检查和记录各列的名称，类型，主键
 				news.tableName = str; //表名

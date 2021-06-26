@@ -55,6 +55,7 @@ int CatalogManager::startCata()
     }
     ss.str("");
     ss.clear();
+    free(readBuff);
     return SUCCESS;
 }
 
@@ -154,6 +155,45 @@ bool CatalogManager::findSchemaColumn(std::string& tableName, std::string& attrN
 int CatalogManager::getColumnAddr(std::string& tableName, std::string& attrName)
 {
     return ctgMgr.schemas[ctgMgr.schemaIndex[tableName]].attributeIndex[attrName];
+}
+
+int CatalogManager::getFileAddr(std::string& scheName)
+{
+    return ctgMgr.schemas[ctgMgr.schemaIndex[scheName]].fileAddr;
+}
+
+bool CatalogManager::findIndex(std::string& indexName)
+{
+    return ctgMgr.indexAttr.find(indexName) != ctgMgr.indexAttr.end() && 
+           ctgMgr.indexSchema.find(indexName) != ctgMgr.indexSchema.end();
+}
+
+int CatalogManager::addIndex(std::string& indexName, std::string& tableName, std::string& attrName)
+{
+    if(!findIndex(indexName))
+        return FAILURE;
+    ctgMgr.indexSchema[indexName] = tableName;
+    ctgMgr.indexAttr[indexName] = attrName;
+    return SUCCESS;
+}
+
+int CatalogManager::dropIndex(std::string& indexName)
+{
+    if(!findIndex(indexName))
+        return FAILURE;
+    ctgMgr.indexSchema.erase(indexName);
+    ctgMgr.indexAttr.erase(indexName);
+    return SUCCESS;
+}
+
+std::string CatalogManager::getIndexSchemaName(std::string& indexName)
+{
+    return ctgMgr.indexSchema[indexName];
+}
+
+std::string CatalogManager::getIndexAttrName(std::string& indexName)
+{
+    return ctgMgr.indexSchema[indexName];
 }
 
 CatalogManager ctgMgr;

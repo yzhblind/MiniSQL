@@ -4,7 +4,10 @@
 #include "Type.hpp"
 #include "CatalogManager.hpp"
 #include "BufferManager.hpp"
+#include "IndexManager.hpp"
+#include <iostream>
 
+bool API_check_schema(std::string tableName);
 void SQL_create_table(schema news);
 void SQL_create_index(std::string indexName, std::string tableName, std::string attrName);
 void SQL_drop_table(std::string tableName);
