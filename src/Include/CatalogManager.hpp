@@ -1,5 +1,5 @@
 #pragma once
-
+#include "BufferManager.hpp"
 #include "Type.hpp"
 class CatalogManager
 {
@@ -8,8 +8,8 @@ private:
     std::vector<schema> schemas;
     std::map<std::string, int> schemaIndex;
 public:
-    CatalogManager();
-    ~CatalogManager();
+    //CatalogManager();
+    //~CatalogManager();
     int startCata();
     int endCata();
     int addSchema(std::string tableName, std::vector<attribute>& column, int primaryKey);
