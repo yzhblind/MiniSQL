@@ -60,6 +60,7 @@ struct condExpr
     ~condExpr() { delete[] static_cast<const char *>(val); }
     condExpr(const condExpr &obj) : origin(obj.origin), pos(obj.pos), opr(obj.opr), val(copyVal(obj.origin, obj.pos, obj.val)) {}
 };
+class node;
 class filter
 {
 private:
@@ -77,6 +78,7 @@ public:
     inline int getOffset(int pos) { return offset[pos]; }
     inline int getSize() { return *offset.rbegin(); }
     int addCond(const condExpr &c);
+    int push(const node &in);
     int push(void *record, dword vAddr, bool delFlag = false);
     // inline void setKeyPos(int pos) { keyPos = pos; }
 };
@@ -85,37 +87,9 @@ struct element
     int type;
     void *ptr;
     element(int type, void *ptr) : type(type), ptr(ptr) {}
+    element(const element &src) : type(src.type), ptr(src.ptr) {}
     void cpy(const element &src) { memcpy(ptr, src.ptr, type2size(type)); }
-    friend bool operator<(const element &a, const element &b);
+    friend bool operator<=(const element &a, const element &b);
     friend bool operator==(const element &a, const element &b);
+    friend bool operator<(const element &a, const element &b);
 };
-bool operator<=(const element &a, const element &b)
-{
-    switch (a.type)
-    {
-    case 0:
-        return *static_cast<int *>(a.ptr) <= *static_cast<int *>(b.ptr);
-        break;
-    case 1:
-        return *static_cast<float *>(a.ptr) <= *static_cast<float *>(b.ptr);
-        break;
-    default:
-        return strncmp(static_cast<char *>(a.ptr), static_cast<char *>(b.ptr), a.type) <= 0;
-        break;
-    }
-}
-bool operator==(const element &a, const element &b)
-{
-    switch (a.type)
-    {
-    case 0:
-        return *static_cast<int *>(a.ptr) == *static_cast<int *>(b.ptr);
-        break;
-    case 1:
-        return *static_cast<float *>(a.ptr) == *static_cast<float *>(b.ptr);
-        break;
-    default:
-        return strncmp(static_cast<char *>(a.ptr), static_cast<char *>(b.ptr), a.type) == 0;
-        break;
-    }
-}
