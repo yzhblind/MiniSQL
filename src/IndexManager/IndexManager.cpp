@@ -62,6 +62,11 @@ bnode::bnode(const node &src) : node(src)
     parent = reinterpret_cast<word *>(base + 2);
     cnt = reinterpret_cast<int *>(base + 6);
 }
+bnode::bnode(const bnode &src) : node(src), base(src.base), parent(src.parent), cnt(src.cnt)
+{
+    // 每次类构造时，PIN计数器都要增加1
+    origin.pinBlock(getFileAddr(), getBlockAddr(), PIN);
+}
 bnode::~bnode() { origin.pinBlock(getFileAddr(), getBlockAddr(), UNPIN); }
 IndexManager::IndexManager()
 {
@@ -72,7 +77,7 @@ IndexManager::IndexManager()
         bInMincnt[i] = (bcnt[i] + 1) / 2 - 1;
         bLeafMincnt[i] = bcnt[i] / 2;
     }
-    bnode::tmpMemory = new char[BufferManager::pageSize + 256];
+    bnode::tmpMemory = new char[BufferManager::pageSize + 256 + 8];
 }
 IndexManager::~IndexManager() { delete[] static_cast<char *>(bnode::tmpMemory); }
 int bnode::binarySearch(const element &e, const bool lFlag)
@@ -99,6 +104,8 @@ void *bnode::move(int start, int dir, int type, const packing packingType)
     int dest = index2offset(start + dir, type) + (packingType == PTR_DATA ? 0 : 6);
     int src = index2offset(start, type) + (packingType == PTR_DATA ? 0 : 6);
     int end = index2offset(*cnt, type) + 6;
+    if (end < src)
+        return NULL;
     memmove(base + dest, base + src, end - src);
     *cnt += dir;
     return base + src;
@@ -175,23 +182,40 @@ int bnode::replaceKey(const element &key, const element &newKey)
 }
 bnode bnode::split(const element &key, const dword virtAddr)
 {
+    // 拷贝节点内容到更大的内存中
     memcpy(tmpMemory, phyAddr, BufferManager::pageSize);
+    // 保存原内存块的地址
     void *phyAddrSave = phyAddr;
+    // 替换节点内部内存
     phyAddr = tmpMemory;
+    // base，parent 和 cnt 指针均要相应更新至临时内存块上
     base = reinterpret_cast<char *>(phyAddr);
     parent = reinterpret_cast<word *>(base + 2);
     cnt = reinterpret_cast<int *>(base + 6);
+    // 得到空余空间后进行插入
+    // 叶节点将指针插入到key的左侧，非叶节点插入到key的右侧
     insertKey(key, virtAddr, *base == 0 ? PTR_DATA : DATA_PTR);
+    // 计算分裂后节点的元素个数分配
     int lcnt = (*cnt + 1) / 2;
     int rcnt = *cnt - lcnt;
+    // 开辟新节点空间
     bnode t(origin.getNextFree(getFileAddr()));
+    // 分裂节点的叶节点性质与原节点相同
+    // 分裂节点不可能是根节点
     *t.base = *base, *(t.base + 1) = 0, *t.cnt = rcnt;
+    // 按PTR_DATA方式打包，迁移index为lcnt与之后的元素至新节点
     int dest = index2offset(0, key.type);
     int src = index2offset(lcnt, key.type);
     int end = index2offset(*cnt, key.type) + 6;
+    // 调整原节点大小，注意原节点末尾指针仍存在问题需要进一步修正
     *cnt = lcnt;
+    // 实际迁移
     memcpy(t.base + dest, base + src, end - src);
+    // 新节点改动，设置dirty保证持久化
     t.origin.setDirty(t.getFileAddr(), t.getBlockAddr());
+    // 若节点为叶节点，则原节点尾指针指向新分裂节点
+    // 否则弹出尾部元素，其将进入父节点
+    // 弹出仅为逻辑操作，元素实际存在，父节点操作由调用者完成
     if (*base == 0)
     {
         *reinterpret_cast<word *>(base + src) = t.getBlockAddr();
@@ -206,6 +230,7 @@ bnode bnode::split(const element &key, const dword virtAddr)
     base = reinterpret_cast<char *>(phyAddr);
     parent = reinterpret_cast<word *>(base + 2);
     cnt = reinterpret_cast<int *>(base + 6);
+    // 返回新节点
     return t;
 }
 int bnode::splice(bnode &par, bnode &src, int type)

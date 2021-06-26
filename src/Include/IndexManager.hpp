@@ -34,6 +34,7 @@ private:
     // 使用时保证*cnt > 0
     // 默认返回第一个大于等于e的元素的index
     // lFlag表示less flag，指定为true后将返回第一个大于e的元素的index
+    // 不存在则返回*cnt
     int binarySearch(const element &e, const bool lFlag = false);
     // 按照packingType将B+树节点内部的key与指针打包，每个包的index取决于包内key的index
     // 然后move函数执行将第start个包移动dir(可正可负)个包的位置
@@ -47,6 +48,8 @@ public:
     // 构造函数，一个B+树节点由一个Buffer块构造而来
     // 构造为B+树节点的Buffer块将PIN在内存中，不会被替换出去
     bnode(const node &src);
+    // 用于保证拷贝构造时Buffer的PIN计数的一致性
+    bnode(const bnode &src);
     // 析构，UNPIN构造本节点的块
     ~bnode();
     // 获取是否是叶节点
@@ -66,8 +69,12 @@ public:
     dword find(const element &key, const packing packingType = PTR_DATA, const bool equalFlag = false, const bool lFlag = false);
     // 返回插入位置的index，需保证节点未满
     int insertKey(const element &key, const dword virtAddr, const packing packingType = PTR_DATA);
+    // 删掉第一个大于等于key的元素与打包的指针
+    // 返回删掉元素的index，否则返回FAILURE
     int deleteKey(const element &key, const packing packingType = PTR_DATA);
+    // 查找元素key，若存在则用newKey替换它
     int replaceKey(const element &key, const element &newKey);
+    // 分裂节点，返回产生的新节点，新节点中的元素大于当前节点
     bnode split(const element &key, const dword virtAddr);
     int splice(bnode &par, bnode &src, int type);
     // 返回第一个小于父节点中应被删除索引的元素
