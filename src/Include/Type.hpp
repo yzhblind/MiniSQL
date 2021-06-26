@@ -60,6 +60,7 @@ struct condExpr
     ~condExpr() { delete[] static_cast<const char *>(val); }
     condExpr(const condExpr &obj) : origin(obj.origin), pos(obj.pos), opr(obj.opr), val(copyVal(obj.origin, obj.pos, obj.val)) {}
 };
+class node;
 class filter
 {
 private:

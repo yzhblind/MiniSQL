@@ -52,9 +52,7 @@ bool operator==(const element &a, const element &b)
         break;
     }
 }
-//所有的bnode共有一块临时内存，大小=页大小+最大类型大小
-//于IndexManager构造时申请，于其析构时释放
-//用于存储临时超过节点限制的B+树待分裂节点
+
 void *bnode::tmpMemory = NULL;
 
 bnode::bnode(const node &src) : node(src)
@@ -119,11 +117,11 @@ dword bnode::find(const element &key, const packing packingType, const bool equa
     int idx = binarySearch(key, lFlag);
     if (idx != getCnt() || (idx == getCnt() && packingType == PTR_DATA && equalFlag == false))
     {
-        int offset = index2offset(idx, key.type);
         // if (key == element(key.type, base + offset + 6))
         // {
         if (equalFlag == false || (equalFlag == true && key == getElement(idx, key.type)))
         {
+            int offset = index2offset(idx, key.type);
             word blockAddr = *reinterpret_cast<word *>(base + offset + (packingType == PTR_DATA ? 0 : 6 + type2size(key.type)));
             hword offsetAddr = *reinterpret_cast<hword *>(base + offset + 4 + (packingType == PTR_DATA ? 0 : 6 + type2size(key.type)));
             return combileVirtAddr(getFileAddr(), blockAddr, offsetAddr);
