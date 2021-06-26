@@ -158,6 +158,7 @@ int get_val_type(string val)
 	for (vi = 0; vi < val.size(); vi++)
 	{
 		p = val[vi];
+		
 		switch (p)
 		{
 		case '0':
