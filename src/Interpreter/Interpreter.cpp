@@ -128,7 +128,7 @@ int get_name(stringstream &i, string &name, string form, char div)
 			else
 				break;
 		default:
-			if (worddiv == 0)
+			if (worddiv == 0 || worddiv == 1)
 			{
 				worddiv = 1;
 				name += tmp;
@@ -234,6 +234,7 @@ int inst_reader::translate()
 					else
 						ss << tmp;
 				}
+				ss << ',';
 				while ((tmp = ss.get()) != -1)
 				{
 					if (tmp == ',')
@@ -258,7 +259,7 @@ int inst_reader::translate()
 							tmp_att.isUnique = false;
 						}
 						line >> str;
-						if (prmode == 0 && (str != "int" || str != "char" || str != "float"))
+						if (prmode == 0 && (str != "int" && str != "char" && str != "float"))
 						{
 							cout << "Error: illegal format for attribute to be created" << endl;
 							return -1;
@@ -272,6 +273,7 @@ int inst_reader::translate()
 						{
 						case int_type:
 							tmp_att.type = 0;
+							str = "";
 							line >> str;
 							if (str == "unique")
 							{
@@ -285,6 +287,7 @@ int inst_reader::translate()
 							break;
 						case flt_type:
 							tmp_att.type = 1;
+							str = "";
 							line >> str;
 							if (str == "unique")
 							{
@@ -295,6 +298,7 @@ int inst_reader::translate()
 								cout << "Error: illegal type define for attribute" << endl;
 								return -1;
 							}
+							break;
 						case str_type:
 						{
 							int len;
@@ -308,6 +312,7 @@ int inst_reader::translate()
 							{
 								tmp_att.type = len + 1;
 							}
+							str = "";
 							line >> str;
 							if (str == "unique")
 							{
@@ -318,6 +323,7 @@ int inst_reader::translate()
 								cout << "Error: illegal type define for attribute" << endl;
 								return -1;
 							}
+							break;
 						}
 						case prmy_key:
 						{
@@ -337,11 +343,12 @@ int inst_reader::translate()
 								return -1;
 							}
 							line >> check;
-							if (check == "")
+							if (check != "")
 							{
 								cout << "Error: illegal attribute name for primary key definition" << endl;
 								return -1;
 							}
+							break;
 						}
 						default:
 							cout << "Error: illegal type definition or primary key definition for attribute" << endl;
@@ -368,7 +375,7 @@ int inst_reader::translate()
 					return -1;
 				}
 				SQL_create_table(news);
-				cout << "crt table " << str << endl; //测试用输出语句
+				cout << "crt table " << news.tableName << endl; //测试用输出语句
 			}
 			break;
 		}
@@ -399,7 +406,7 @@ int inst_reader::translate()
 
 			SQL_create_index(indexName, tableName, attrName);
 
-			cout << "crt index " << indexName << ' ' << "on" << tableName << '(' << attrName << ')' << endl;
+			cout << "crt index " << indexName << ' ' << "on " << tableName << " (" << attrName << ')' << endl;
 			break;
 		}
 		default:
@@ -411,6 +418,8 @@ int inst_reader::translate()
 		switch (res = trans.count(keywd2) ? trans.at(keywd2) : -1)
 		{
 		case table:		//drop table
+			str = "";
+			check = "";
 			i >> str;	//str此处指代tableName
 			i >> check; //检查是否有多余字符串
 			if (check != "" || str.find(',') != str.npos || str == "")
@@ -420,6 +429,11 @@ int inst_reader::translate()
 			}
 			else
 			{
+				if(!ctgMgr.findSchema(str))
+				{
+					cout << "Error: such table doesn't exist" << endl;
+					return -1;
+				}
 				SQL_drop_table(str);
 				cout << "drop table " << str << endl;
 			}

@@ -1,0 +1,13 @@
+create table student ( sno char(8), 
+sname char(16) unique,
+		sage int,
+		sgender char (1),
+primary key (sno) );
+
+drop table student;
+
+create index stunameidx on student ( sname );
+
+select * from student;
+select * from student where sno = ‘88888888’;
+select * from student where sage > 20 and sgender = ‘F’;
