@@ -86,10 +86,9 @@ void SQL_create_index(std::string &indexName, std::string &tableName, std::strin
 
 void SQL_drop_table(std::string &tableName)
 {
-    
     if (ctgMgr.dropSchema(tableName))
         std::cout << "Error: COULD NOT DROP TABLE" << std::endl;
-    
+    // !!! __ BIG PROBLEM __ 
 }
 
 void SQL_drop_index(std::string &indexName)
@@ -148,49 +147,11 @@ void API_select_on_index(std::string &tableName, std::vector<condExpr> &conditio
     curFilter.output(std::cout);
 }
 
-void SQL_insert(std::string &tableName, std::vector<element> &list)
+void SQL_insert(std::string &tableName, void *data)
 {
     std::vector<attribute> &col = ctgMgr.getColumn(tableName);
     int fileAddr = ctgMgr.getFileAddr(tableName);
-    int sz = col.size();
-    int sizeTotal = 0;
-    for (int i = 0; i < sz; i++)
-    {
-        if (col[i].type != list[i].type)
-        {
-            std::cout << "!!! API ERROR IN __INSERT__" << std::endl;
-            return;
-        }
-        if (col[i].indexRootAddr != 0)
-        {
-            idxMgr.insertEntry(col[i], list[i], col[i].indexRootAddr);
-        }
-        sizeTotal += type2size(col[i].type);
-    }
-    void *data = malloc(sizeTotal);
-    sizeTotal = 0;
-    for (int i = 0; i < sz; i++)
-    {
-        switch (col[i].type)
-        {
-        case 0:
-            *((int *)((char *)data + sizeTotal)) = *((int *)list[i].ptr);
-            break;
-        case 1:
-            *((float *)((char *)data + sizeTotal)) = *((float *)list[i].ptr);
-            break;
-        default:
-            for (int j = 0; j < col[i].type - 1; j++)
-            {
-                *((char *)((char *)data + sizeTotal + j)) = *((char *)((char *)list[i].ptr + j));
-            }
-            *((char *)((char *)data + sizeTotal + col[i].type - 1)) = '\0';
-            break;
-        }
-        sizeTotal += type2size(col[i].type);
-    }
     rcdMgr.insertRecord(fileAddr, data, col);
-    free(data);
 }
 
 void SQL_delete_all(std::string &tableName)

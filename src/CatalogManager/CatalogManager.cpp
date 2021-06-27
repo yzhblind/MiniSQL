@@ -7,9 +7,9 @@ int CatalogManager::startCata()
 {
     cataFileAddr = bufMgr.openFile("CATALOG", CATALOG);
     int indexFileAddr = bufMgr.openFile("INDEX", INDEX);
-    
+    idxMgr.setIndexFileAddr(indexFileAddr);
     char *readBuff;
-    int schemaNum;
+    int schemaNum = 0;
     int blockNum;
     std::stringstream ss;
 
@@ -34,7 +34,6 @@ int CatalogManager::startCata()
         ss.write(readBuff, BufferManager::pageSize);
     }
     //ss.clear();
-    
 
     for (int i = 0; i < schemaNum; i++)
     {
@@ -54,6 +53,14 @@ int CatalogManager::startCata()
             ss >> tmpAttr.type;
             ss >> tmpAttr.isUnique;
             ss >> tmpAttr.indexRootAddr;
+            if (tmpAttr.indexRootAddr != 0 && j != tmpSchema.primaryKey)
+            {
+                std::string indexName;
+                ss >> indexName;
+                ctgMgr.attrIndex[tmpAttr.attrName] = indexName;
+                ctgMgr.indexAttr[indexName] = tmpAttr.attrName;
+                ctgMgr.indexSchema[indexName] = tmpSchema.tableName;
+            }
             tmpSchema.column.push_back(tmpAttr);
             tmpSchema.attributeIndex[tmpAttr.attrName] = j;
         }
@@ -86,13 +93,14 @@ int CatalogManager::endCata()
     node firstBlock = bufMgr.getBlock(cataFileAddr, 1);
 
     ss << schemaNum;
+    ss << " ";
     ss.read(writeBuff, BufferManager::pageSize);
     ss.clear();
     firstBlock.write(writeBuff, 0, BufferManager::pageSize);
 
     for (int i = 0; i < schemaNum; i++)
     {
-        
+
         ss << ctgMgr.schemas[i].tableName;
         ss << " ";
         ss << ctgMgr.schemas[i].column.size();
@@ -104,7 +112,6 @@ int CatalogManager::endCata()
         int columnNum = ctgMgr.schemas[i].column.size();
         for (int j = 0; j < columnNum; j++)
         {
-            
             ss << ctgMgr.schemas[i].column[j].attrName;
             ss << " ";
             ss << ctgMgr.schemas[i].column[j].type;
@@ -113,6 +120,11 @@ int CatalogManager::endCata()
             ss << " ";
             ss << ctgMgr.schemas[i].column[j].indexRootAddr;
             ss << " ";
+            if (ctgMgr.schemas[i].column[j].indexRootAddr != 0 && j != ctgMgr.schemas[i].primaryKey)
+            {
+                ss << ctgMgr.attrIndex[ctgMgr.schemas[i].column[j].attrName];
+                ss << " ";
+            }
         }
     }
     int blockCNT = 2;
@@ -139,17 +151,16 @@ int CatalogManager::addSchema(std::string tableName, std::vector<attribute> &col
         recordSize += type2size(it.type);
     tmpSchema.recordSize = recordSize;
     tmpSchema.fileAddr = bufMgr.openFile(tableName, DATA, recordSize);
-    
+
     ctgMgr.schemas.push_back(tmpSchema);
     ctgMgr.schemaIndex[tableName] = ctgMgr.schemas.size() - 1;
 
     int colsz = column.size();
     int schsz = ctgMgr.schemas.size();
-    for(int i = 0; i < colsz; i++)
+    for (int i = 0; i < colsz; i++)
     {
         ctgMgr.schemas[schsz - 1].attributeIndex[column[i].attrName] = i;
     }
-    
 
     return SUCCESS;
 }
@@ -202,6 +213,7 @@ int CatalogManager::addIndex(std::string &indexName, std::string &tableName, std
         return FAILURE;
     ctgMgr.indexSchema[indexName] = tableName;
     ctgMgr.indexAttr[indexName] = attrName;
+    ctgMgr.attrIndex[attrName] = indexName;
     return SUCCESS;
 }
 
@@ -209,6 +221,7 @@ int CatalogManager::dropIndex(std::string &indexName)
 {
     if (!findIndex(indexName))
         return FAILURE;
+    ctgMgr.attrIndex.erase(ctgMgr.indexAttr[indexName]);
     ctgMgr.indexSchema.erase(indexName);
     ctgMgr.indexAttr.erase(indexName);
     return SUCCESS;
@@ -222,6 +235,11 @@ std::string CatalogManager::getIndexSchemaName(std::string &indexName)
 std::string CatalogManager::getIndexAttrName(std::string &indexName)
 {
     return ctgMgr.indexSchema[indexName];
+}
+
+int CatalogManager::getRecordSize(std::string& tableName)
+{
+    return ctgMgr.schemas[ctgMgr.schemaIndex[tableName]].recordSize;
 }
 
 CatalogManager ctgMgr;

@@ -426,7 +426,7 @@ int inst_reader::translate()
 				return -1;
 			}
 
-			if(ctgMgr.findIndex(indexName))
+			if (ctgMgr.findIndex(indexName))
 			{
 				cout << "Error: the index has already been created" << endl;
 				return -1;
@@ -481,7 +481,7 @@ int inst_reader::translate()
 					cout << "Error: no such index" << endl;
 					return -1;
 				}
-				
+
 				SQL_drop_index(str);
 				cout << "drop index " << str << endl;
 			}
@@ -513,6 +513,7 @@ int inst_reader::translate()
 			cout << "Error: such table does not exist" << endl;
 			return -1;
 		}
+		str = "";
 		i >> str;
 		if (str == "")
 		{
@@ -529,11 +530,13 @@ int inst_reader::translate()
 			vector<condExpr> conditions;
 			int num_cond = 0, stt = 0;
 			const std::vector<attribute> attr = ctgMgr.getColumn(tableName);
+			str = "";
 			i >> str;
 			while (str != "")
 			{
 				if (stt == 3 && str == "and")
 				{
+					str = "";
 					i >> str;
 					stt = 0;
 				}
@@ -548,6 +551,7 @@ int inst_reader::translate()
 					{
 						attrName = str;
 						pos = ctgMgr.getColumnAddr(tableName, attrName);
+						str = "";
 						i >> str;
 						stt = 1;
 					}
@@ -562,6 +566,7 @@ int inst_reader::translate()
 					else
 					{
 						tmpOP = optrans.at(str);
+						str = "";
 						i >> str;
 						stt = 2;
 					}
@@ -617,6 +622,8 @@ int inst_reader::translate()
 					ss.str("");
 					ss.clear();
 					stt = 3;
+					str = "";
+					i >> str;
 				}
 				else
 				{
@@ -677,38 +684,64 @@ int inst_reader::translate()
 				ss << tmp;
 		}
 		ss >> val;
+		void *data = malloc(ctgMgr.getRecordSize(tableName));
+		int curSize = 0;
 		while (val != "")
 		{
 			type = get_val_type(val);
+			if (type > 1)
+				type -= 2;
 			if (type == -1)
 			{
 				cout << "Error: wrong type of value" << endl;
 				return -1;
 			}
-			if (type != attr[num].type)
-			{
-				cout << "Error: given value's type is not consistent with the table's" << endl;
-				return -1;
-			}
 			switch (type)
 			{
 			case 0:
+				if (type != attr[num].type)
+				{
+					cout << "Error: given value's type is not consistent with the table's" << endl;
+					free(data);
+					return -1;
+				}
 				tr << val;
 				tr >> int_val;
-				list.push_back({type, &int_val});
+				*((int *)((char *)data + curSize)) = int_val;
 				break;
 			case 1:
+				if (type != attr[num].type)
+				{
+					cout << "Error: given value's type is not consistent with the table's" << endl;
+					free(data);
+					return -1;
+				}
 				tr << val;
 				tr >> flo_val;
-				list.push_back({type, &flo_val});
+				*((float *)((char *)data + curSize)) = flo_val;
 				break;
 			default:
-				str_val = str.substr(1, str.size() - 2);
-				list.push_back({type, &str_val});
+				if (type > attr[num].type)
+				{
+					cout << "Error: given value's type is not consistent with the table's" << endl;
+					free(data);
+					return -1;
+				}
+				str_val = val.substr(1, val.size() - 2);
+				for (int j = 0; j < type - 1; j++)
+				{
+					if(j < str_val.size())
+						*((char *)((char *)data + curSize + j)) = str_val[j];
+					else 
+						*((char *)((char *)data + curSize + j)) = '\0';
+				}
+				*((char *)((char *)data + curSize + type - 1)) = '\0';
 			}
+			curSize += type2size(type);
 			tr.clear();
 			tr.str("");
 			num++;
+			val = "";
 			ss >> val;
 		}
 		if (num != attr.size())
@@ -716,7 +749,8 @@ int inst_reader::translate()
 			cout << "Error: no enough values" << endl;
 			return -1;
 		}
-		SQL_insert(tableName, list);
+		SQL_insert(tableName, data);
+		free(data);
 		break;
 	}
 	case dlt:

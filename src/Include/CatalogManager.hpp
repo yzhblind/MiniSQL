@@ -1,5 +1,6 @@
 #pragma once
 #include "BufferManager.hpp"
+#include "IndexManager.hpp"
 #include "Type.hpp"
 class CatalogManager
 {
@@ -9,6 +10,7 @@ private:
     std::map<std::string, int> schemaIndex;
     std::map<std::string, std::string> indexSchema;
     std::map<std::string, std::string> indexAttr;
+    std::map<std::string, std::string> attrIndex;
 public:
     //CatalogManager();
     //~CatalogManager();
