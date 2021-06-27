@@ -47,16 +47,16 @@ void filter::output(std::ostream &out)
             {
             case 0:
                 curw = std::max(INT_WIDTH, (int)origin[i].attrName.size() + 1);
-                out << std::setw(curw) << *((int *)(res[i] + offset[j]));
+                out << std::setw(curw) << *((int *)((char *)res[i] + offset[j]));
                 break;
             case 1:
                 curw = std::max(FLOAT_WIDTH, (int)origin[i].attrName.size() + 1);
-                out << std::setw(curw) << *((float *)(res[i] + offset[j]));
+                out << std::setw(curw) << *((float *)((char *)res[i] + offset[j]));
                 break;
             default:
                 curw = std::max(CHAR_WIDTH, (int)origin[i].attrName.size() + 1);
                 curw = std::max(curw, origin[i].type + 1);
-                out << std::setw(curw) << *((char *)(res[i] + offset[j]));
+                out << std::setw(curw) << *((char *)((char *)res[i] + offset[j]));
             }
         }
         out << std::endl;
@@ -134,7 +134,7 @@ void API_select_index(std::string &tableName, std::vector<condExpr> &condition, 
     int colpos = condition[pos].pos;
     int curRootAddr = col[colpos].indexRootAddr;
     element curElement(col[colpos].type, (void *)condition[pos].val);
-    dword tupleAddr = idxMgr.findAddrEntry(ctgMgr.getFileAddr(tableName), ctgMgr.getColumn(tableName)[condition[pos].pos].indexRootAddr, curElement);
+    dword tupleAddr = idxMgr.findAddrEntry(ctgMgr.getFileAddr(tableName), col[colpos].indexRootAddr, curElement);
 
     filter curFilter(col);
     int condsz = condition.size();
@@ -144,7 +144,7 @@ void API_select_index(std::string &tableName, std::vector<condExpr> &condition, 
     curFilter.output(std::cout);
 }
 
-void SQL_insert(std::string tableName, std::vector<element> list)
+void SQL_insert(std::string &tableName, std::vector<element> &list)
 {
     std::vector<attribute> &col = ctgMgr.getColumn(tableName);
     int fileAddr = ctgMgr.getFileAddr(tableName);
@@ -170,17 +170,17 @@ void SQL_insert(std::string tableName, std::vector<element> list)
         switch (col[i].type)
         {
         case 0:
-            *((int *)(data + sizeTotal)) = *((int *)list[i].ptr);
+            *((int *)((char *)data + sizeTotal)) = *((int *)list[i].ptr);
             break;
         case 1:
-            *((float *)(data + sizeTotal)) = *((float *)list[i].ptr);
+            *((float *)((char *)data + sizeTotal)) = *((float *)list[i].ptr);
             break;
         default:
-            for(int j = 0; j < col[i].type - 1; j++)
+            for (int j = 0; j < col[i].type - 1; j++)
             {
-                *((char *)(data + sizeTotal + j)) = *((char *)(list[i].ptr + j));
+                *((char *)((char *)data + sizeTotal + j)) = *((char *)((char *)list[i].ptr + j));
             }
-            *((char *)(data + sizeTotal + col[i].type - 1)) = '\0';
+            *((char *)((char *)data + sizeTotal + col[i].type - 1)) = '\0';
             break;
         }
         sizeTotal += type2size(col[i].type);
@@ -189,12 +189,58 @@ void SQL_insert(std::string tableName, std::vector<element> list)
     free(data);
 }
 
-void SQL_delete_all(std::string tableName)
+void SQL_delete_all(std::string &tableName)
 {
+    std::vector<attribute> &col = ctgMgr.getColumn(tableName);
+    filter curFilter(col);
+    int fileAddr = ctgMgr.getFileAddr(tableName);
+    idxMgr.deleteEntry(col, curFilter);
+    rcdMgr.deleteRecord(fileAddr, curFilter);
+    curFilter.output(std::cout);
 }
 
-void SQL_delete_cond(std::string tableName, std::vector<condExpr> condition)
+void API_delete_index(std::string tableName, std::vector<condExpr> &condition, int pos)
 {
+    std::vector<attribute> &col = ctgMgr.getColumn(tableName);
+    int colpos = condition[pos].pos;
+    int curRootAddr = col[colpos].indexRootAddr;
+    element curElement(col[colpos].type, (void *)condition[pos].val);
+    dword tupleAddr = idxMgr.findAddrEntry(ctgMgr.getFileAddr(tableName), col[colpos].indexRootAddr, curElement);
+
+    filter curFilter(col);
+    int condsz = condition.size();
+    for (int i = 0; i < condsz; i++)
+        curFilter.addCond(condition[i]);
+    rcdMgr.getRecord(tupleAddr, curFilter);
+    if(!curFilter.res.empty())
+    {
+        curFilter.output(std::cout);
+        rcdMgr.deleteRecord(tupleAddr);
+        idxMgr.deleteEntry(col, curFilter);
+    }
+    else 
+    {
+        std::cout << "No satisfying tuples" << std::endl;
+    }
+}
+
+void SQL_delete_cond(std::string &tableName, std::vector<condExpr> &condition)
+{
+    int condsz = condition.size();
+    std::vector<attribute> &col = ctgMgr.getColumn(tableName);
+    filter curFilter(col);
+    for (int i = 0; i < condsz; i++)
+    {
+        condExpr tmp = condition[i];
+        if (tmp.origin[tmp.pos].indexRootAddr)
+        {
+            API_delete_index(tableName, condition, i);
+            return;
+        }
+        curFilter.addCond(condition[i]);
+    }
+    rcdMgr.deleteRecord(ctgMgr.getFileAddr(tableName), curFilter);
+    curFilter.output(std::cout);
 }
 
 /*

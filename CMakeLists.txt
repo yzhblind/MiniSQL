@@ -29,12 +29,12 @@ file(GLOB RECORD_SRC_FILE ${RECORD_SRC}/*.cpp)
 
 add_executable(${PROJECT_NAME}
     ${MINISQL_SRC}/main.cpp
-    ${API_SRC_FILE}
     ${BUFFER_SRC_FILE}
     ${CATALOG_SRC_FILE}
     ${INDEX_SRC_FILE}
     ${INTERPRETER_SRC_FILE}
     ${RECORD_SRC_FILE}
+    ${API_SRC_FILE}
 )
 
 #target_link_libraries(${PROJECT_NAME}

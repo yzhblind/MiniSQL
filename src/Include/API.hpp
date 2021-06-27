@@ -8,6 +8,8 @@
 #include <iostream>
 
 bool API_check_schema(std::string tableName);
+void API_select_index(std::string &tableName, std::vector<condExpr> &condition, int pos);
+void API_delete_index(std::string tableName, std::vector<condExpr> &condition, int pos);
 void SQL_create_table(schema news);
 void SQL_create_index(std::string indexName, std::string tableName, std::string attrName);
 void SQL_drop_table(std::string tableName);
