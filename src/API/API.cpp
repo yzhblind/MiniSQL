@@ -46,17 +46,17 @@ void filter::output(std::ostream &out)
             switch (origin[j].type)
             {
             case 0:
-                curw = std::max(INT_WIDTH, (int)origin[i].attrName.size() + 1);
+                curw = std::max(INT_WIDTH, (int)origin[j].attrName.size() + 1);
                 out << std::setw(curw) << *((int *)((char *)res[i] + offset[j]));
                 break;
             case 1:
-                curw = std::max(FLOAT_WIDTH, (int)origin[i].attrName.size() + 1);
+                curw = std::max(FLOAT_WIDTH, (int)origin[j].attrName.size() + 1);
                 out << std::setw(curw) << *((float *)((char *)res[i] + offset[j]));
                 break;
             default:
-                curw = std::max(CHAR_WIDTH, (int)origin[i].attrName.size() + 1);
-                curw = std::max(curw, origin[i].type + 1);
-                out << std::setw(curw) << *((char *)((char *)res[i] + offset[j]));
+                curw = std::max(CHAR_WIDTH, (int)origin[j].attrName.size() + 1);
+                curw = std::max(curw, origin[j].type + 1);
+                out << std::setw(curw) << (char *)((char *)res[i] + offset[j]);
             }
         }
         out << std::endl;
