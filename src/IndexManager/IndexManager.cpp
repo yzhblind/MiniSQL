@@ -230,23 +230,30 @@ bnode bnode::split(const element &key, const dword virtAddr)
     base = reinterpret_cast<char *>(phyAddr);
     parent = reinterpret_cast<word *>(base + 2);
     cnt = reinterpret_cast<int *>(base + 6);
-    // 返回新节点
+    // 返回新节点，此处涉及到拷贝构造函数
     return t;
 }
 int bnode::splice(bnode &par, bnode &src, int type)
 {
     // bnode par(origin.getBlock(getFileAddr(), *parent));
+    
+    // 本函数对涉及到3个节点，均会发生修改，需全部设为dirty
     origin.setDirty(getFileAddr(), getBlockAddr());
     src.origin.setDirty(src.getFileAddr(), src.getBlockAddr());
     par.origin.setDirty(par.getFileAddr(), par.getBlockAddr());
+    // 先判断src节点是当前节点的左兄弟还是右兄弟
     if (src.getElement(0, type) <= getElement(0, type))
     {
-        // int firstKey = index2offset(0, type);
+        // src节点为左兄弟
+        // 最后一个元素左指针的偏移量
         int lastKey = index2offset(src.getCnt() - 1, type);
+        // 获取src中最大的元素
         element key = src.getElement(src.getCnt() - 1, type);
+        // 最大元素的左指针指向的地址
         dword virtAddr = combileVirtAddr(0, *reinterpret_cast<word *>(src.base + lastKey), *reinterpret_cast<hword *>(src.base + lastKey + 4));
         if (*base == 0)
         {
+            // 叶节点
             element oldKey = getElement(0, type);
             par.replaceKey(oldKey, key);
             insertKey(key, virtAddr);
