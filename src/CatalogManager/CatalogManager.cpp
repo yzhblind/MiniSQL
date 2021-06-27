@@ -44,6 +44,8 @@ int CatalogManager::startCata()
         ss >> tmpSchema.primaryKey;
         ss >> tmpSchema.recordSize;
 
+        ctgMgr.schemaIndex[tmpSchema.tableName] = i;
+
         for (int j = 0; j < columnNum; j++)
         {
             ss >> tmpAttr.attrName;
@@ -138,6 +140,14 @@ int CatalogManager::addSchema(std::string tableName, std::vector<attribute> &col
     ctgMgr.schemas.push_back(tmpSchema);
     ctgMgr.schemaIndex[tableName] = ctgMgr.schemas.size() - 1;
 
+    int colsz = column.size();
+    int schsz = ctgMgr.schemas.size();
+    for(int i = 0; i < colsz; i++)
+    {
+        ctgMgr.schemas[schsz - 1].attributeIndex[column[i].attrName] = i;
+    }
+    
+
     return SUCCESS;
 }
 
@@ -185,7 +195,7 @@ bool CatalogManager::findIndex(std::string &indexName)
 
 int CatalogManager::addIndex(std::string &indexName, std::string &tableName, std::string &attrName)
 {
-    if (!findIndex(indexName))
+    if (findIndex(indexName))
         return FAILURE;
     ctgMgr.indexSchema[indexName] = tableName;
     ctgMgr.indexAttr[indexName] = attrName;

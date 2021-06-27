@@ -414,14 +414,21 @@ int inst_reader::translate()
 			if (get_name(i, attrName, "attribute", ')'))
 				return -1;
 
-			if (ctgMgr.getIndexAttrName(indexName) != attrName)
+			// if there is no such table
+			if (!ctgMgr.findSchema(tableName))
 			{
-				cout << "Error: no such index" << endl;
+				cout << "Error: no such table" << endl;
 				return -1;
 			}
-			if (ctgMgr.getIndexSchemaName(indexName) != tableName)
+			if (!ctgMgr.findSchemaColumn(tableName, attrName))
 			{
-				cout << "Error: no such index" << endl;
+				cout << "Error: no such attribute" << endl;
+				return -1;
+			}
+
+			if(ctgMgr.findIndex(indexName))
+			{
+				cout << "Error: the index has already been created" << endl;
 				return -1;
 			}
 
@@ -469,6 +476,12 @@ int inst_reader::translate()
 			}
 			else
 			{
+				if (!ctgMgr.findIndex(str))
+				{
+					cout << "Error: no such index" << endl;
+					return -1;
+				}
+				
 				SQL_drop_index(str);
 				cout << "drop index " << str << endl;
 			}

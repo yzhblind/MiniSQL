@@ -86,8 +86,10 @@ void SQL_create_index(std::string &indexName, std::string &tableName, std::strin
 
 void SQL_drop_table(std::string &tableName)
 {
+    
     if (ctgMgr.dropSchema(tableName))
         std::cout << "Error: COULD NOT DROP TABLE" << std::endl;
+    
 }
 
 void SQL_drop_index(std::string &indexName)
