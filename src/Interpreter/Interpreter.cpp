@@ -728,16 +728,16 @@ int inst_reader::translate()
 					return -1;
 				}
 				str_val = val.substr(1, val.size() - 2);
-				for (int j = 0; j < type - 1; j++)
+				for (int j = 0; j < attr[num].type - 1; j++)
 				{
 					if(j < str_val.size())
 						*((char *)((char *)data + curSize + j)) = str_val[j];
 					else 
 						*((char *)((char *)data + curSize + j)) = '\0';
 				}
-				*((char *)((char *)data + curSize + type - 1)) = '\0';
+				*((char *)((char *)data + curSize + attr[num].type - 1)) = '\0';
 			}
-			curSize += type2size(type);
+			curSize += type2size(attr[num].type);
 			tr.clear();
 			tr.str("");
 			num++;
