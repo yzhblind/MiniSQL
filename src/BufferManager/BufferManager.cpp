@@ -2,7 +2,7 @@
 //#include "CatalogManager.hpp"
 #include "Type.hpp"
 
-const long long BufferManager::pageSize = 4096;
+const long long BufferManager::pageSize = 32;
 long long BufferManager::bufferSize = 1024;
 
 int BufferManager::writeBlock2File(const int bufID)

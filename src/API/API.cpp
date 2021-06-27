@@ -72,6 +72,8 @@ void SQL_create_table(schema &news)
 {
     if (ctgMgr.addSchema(news.tableName, news.column, news.primaryKey))
         std::cout << "Error: COULD NOT CREATE TABLE" << std::endl;
+    std::vector<attribute> &col = ctgMgr.getColumn(news.tableName);
+    idxMgr.createEntry(ctgMgr.getFileAddr(news.tableName), col, news.primaryKey);
 }
 
 void SQL_create_index(std::string &indexName, std::string &tableName, std::string &attrName)
@@ -119,7 +121,7 @@ void SQL_select_cond(std::string &tableName, std::vector<condExpr> &condition)
         condExpr tmp = condition[i];
         if (tmp.origin[tmp.pos].indexRootAddr)
         {
-            API_select_index(tableName, condition, i);
+            API_select_on_index(tableName, condition, i);
             return;
         }
         curFilter.addCond(condition[i]);
@@ -128,7 +130,7 @@ void SQL_select_cond(std::string &tableName, std::vector<condExpr> &condition)
     curFilter.output(std::cout);
 }
 
-void API_select_index(std::string &tableName, std::vector<condExpr> &condition, int pos)
+void API_select_on_index(std::string &tableName, std::vector<condExpr> &condition, int &pos)
 {
     std::vector<attribute> &col = ctgMgr.getColumn(tableName);
     int colpos = condition[pos].pos;
@@ -199,7 +201,26 @@ void SQL_delete_all(std::string &tableName)
     curFilter.output(std::cout);
 }
 
-void API_delete_index(std::string tableName, std::vector<condExpr> &condition, int pos)
+void SQL_delete_cond(std::string &tableName, std::vector<condExpr> &condition)
+{
+    int condsz = condition.size();
+    std::vector<attribute> &col = ctgMgr.getColumn(tableName);
+    filter curFilter(col);
+    for (int i = 0; i < condsz; i++)
+    {
+        condExpr tmp = condition[i];
+        if (tmp.origin[tmp.pos].indexRootAddr)
+        {
+            API_delete_on_index(tableName, condition, i);
+            return;
+        }
+        curFilter.addCond(condition[i]);
+    }
+    rcdMgr.deleteRecord(ctgMgr.getFileAddr(tableName), curFilter);
+    curFilter.output(std::cout);
+}
+
+void API_delete_on_index(std::string &tableName, std::vector<condExpr> &condition, int &pos)
 {
     std::vector<attribute> &col = ctgMgr.getColumn(tableName);
     int colpos = condition[pos].pos;
@@ -222,25 +243,6 @@ void API_delete_index(std::string tableName, std::vector<condExpr> &condition, i
     {
         std::cout << "No satisfying tuples" << std::endl;
     }
-}
-
-void SQL_delete_cond(std::string &tableName, std::vector<condExpr> &condition)
-{
-    int condsz = condition.size();
-    std::vector<attribute> &col = ctgMgr.getColumn(tableName);
-    filter curFilter(col);
-    for (int i = 0; i < condsz; i++)
-    {
-        condExpr tmp = condition[i];
-        if (tmp.origin[tmp.pos].indexRootAddr)
-        {
-            API_delete_index(tableName, condition, i);
-            return;
-        }
-        curFilter.addCond(condition[i]);
-    }
-    rcdMgr.deleteRecord(ctgMgr.getFileAddr(tableName), curFilter);
-    curFilter.output(std::cout);
 }
 
 /*

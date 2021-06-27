@@ -158,7 +158,7 @@ int get_val_type(string val)
 	for (vi = 0; vi < val.size(); vi++)
 	{
 		p = val[vi];
-		
+
 		switch (p)
 		{
 		case '0':
@@ -216,7 +216,7 @@ int inst_reader::translate()
 			i >> str;
 			if (check_comp(str, "table"))
 				return -1;
-			else if(API_check_schema(str))
+			else if (API_check_schema(str))
 			{
 				cout << "Error: this table has already been created before" << endl;
 				return -1;
@@ -348,6 +348,7 @@ int inst_reader::translate()
 								cout << "Error: lack of attribute name for primary key definition" << endl;
 								return -1;
 							}
+							check = "";
 							line >> check;
 							if (check != "")
 							{
@@ -362,7 +363,10 @@ int inst_reader::translate()
 						}
 
 						if (!prmode)
+						{
+							tmp_att.indexRootAddr = 0;
 							news.column.push_back(tmp_att);
+						}
 						else
 						{
 							prmode = 0;
@@ -410,6 +414,17 @@ int inst_reader::translate()
 			if (get_name(i, attrName, "attribute", ')'))
 				return -1;
 
+			if (ctgMgr.getIndexAttrName(indexName) != attrName)
+			{
+				cout << "Error: no such index" << endl;
+				return -1;
+			}
+			if (ctgMgr.getIndexSchemaName(indexName) != tableName)
+			{
+				cout << "Error: no such index" << endl;
+				return -1;
+			}
+
 			SQL_create_index(indexName, tableName, attrName);
 
 			cout << "crt index " << indexName << ' ' << "on " << tableName << " (" << attrName << ')' << endl;
@@ -423,7 +438,7 @@ int inst_reader::translate()
 		i >> keywd2;
 		switch (res = trans.count(keywd2) ? trans.at(keywd2) : -1)
 		{
-		case table:		//drop table
+		case table: //drop table
 			str = "";
 			check = "";
 			i >> str;	//str此处指代tableName
@@ -435,7 +450,7 @@ int inst_reader::translate()
 			}
 			else
 			{
-				if(!ctgMgr.findSchema(str))
+				if (!ctgMgr.findSchema(str))
 				{
 					cout << "Error: such table doesn't exist" << endl;
 					return -1;
@@ -552,7 +567,7 @@ int inst_reader::translate()
 					{
 						ss << str;
 						ss >> int_val;
-						if(attr[pos].type != 0)
+						if (attr[pos].type != 0)
 						{
 							cout << "Error: value types don't match" << endl;
 							return -1;
@@ -565,7 +580,7 @@ int inst_reader::translate()
 					{
 						ss << str;
 						ss >> flo_val;
-						if(attr[pos].type != 1)
+						if (attr[pos].type != 1)
 						{
 							cout << "Error: value types don't match" << endl;
 							return -1;
@@ -577,7 +592,7 @@ int inst_reader::translate()
 					default:
 					{
 						str_val = str.substr(1, str.size() - 2);
-						if(attr[pos].type <= str_val.size())
+						if (attr[pos].type <= str_val.size())
 						{
 							cout << "Error: value types don't match" << endl;
 							return -1;
@@ -683,7 +698,7 @@ int inst_reader::translate()
 			num++;
 			ss >> val;
 		}
-		if(num != attr.size())
+		if (num != attr.size())
 		{
 			cout << "Error: no enough values" << endl;
 			return -1;

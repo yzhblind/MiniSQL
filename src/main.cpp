@@ -3,8 +3,8 @@
 #include "CatalogManager.hpp"
 
 int main() {
-	inst_reader in;
 	ctgMgr.startCata();
+	inst_reader in;
 	while (in.translate() != quit) {
 		in.clear();
 		in.reread();
