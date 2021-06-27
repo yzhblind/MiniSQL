@@ -129,7 +129,7 @@ bool RecordManager::uniqueCheck(hword fileAddr, void *data, const std::vector<at
     offset.clear();
     offset.push_back(0);
     for (int i = 1; i < origin.size(); ++i)
-        offset.push_back(offset[i - 1] + type2size(origin[i].type));
+        offset.push_back(offset[i - 1] + type2size(origin[i - 1].type));
     int blockNum = bufMgr.getBlockNumber(fileAddr);
     int rSize = bufMgr.getRecordSize(fileAddr);
     char *record = new char[rSize + 1];
