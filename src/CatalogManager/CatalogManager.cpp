@@ -6,6 +6,8 @@
 int CatalogManager::startCata()
 {
     cataFileAddr = bufMgr.openFile("CATALOG", CATALOG);
+    int indexFileAddr = bufMgr.openFile("INDEX", INDEX);
+    
     char *readBuff;
     int schemaNum;
     int blockNum;
@@ -55,8 +57,9 @@ int CatalogManager::startCata()
             tmpSchema.column.push_back(tmpAttr);
             tmpSchema.attributeIndex[tmpAttr.attrName] = j;
         }
-        tmpSchema.fileAddr = bufMgr.openFile(tmpSchema.tableName, DATA, tmpSchema.recordSize);
+        //tmpSchema.fileAddr = bufMgr.openFile(tmpSchema.tableName, DATA, tmpSchema.recordSize);
         ctgMgr.schemas.push_back(tmpSchema);
+        ctgMgr.schemas[ctgMgr.schemas.size() - 1].fileAddr = bufMgr.openFile(tmpSchema.tableName, DATA, tmpSchema.recordSize);
         ctgMgr.schemaIndex[tmpSchema.tableName] = i;
     }
     ss.str("");
