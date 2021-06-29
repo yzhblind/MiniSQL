@@ -142,7 +142,7 @@ bool RecordManager::uniqueCheck(hword fileAddr, void *data, const std::vector<at
             t.read(record, i, rSize + 1);
             if (*record == true)
                 for (int j = 0; j < index2check.size(); ++j)
-                    if (strncmp(static_cast<char *>(data) + 1 + offset[index2check[j]], record + 1 + offset[index2check[j]], type2size(origin[index2check[j]].type)) == 0)
+                    if (strncmp(static_cast<char *>(data) + offset[index2check[j]], record + 1 + offset[index2check[j]], type2size(origin[index2check[j]].type)) == 0)
                     {
                         delete[] record;
                         return false;
