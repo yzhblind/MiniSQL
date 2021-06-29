@@ -387,7 +387,7 @@ int inst_reader::translate()
 					return -1;
 				}
 				SQL_create_table(news);
-				cout << "crt table " << news.tableName << endl; //测试用输出语句
+				//cout << "crt table " << news.tableName << endl; //测试用输出语句
 			}
 			break;
 		}

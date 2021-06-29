@@ -70,10 +70,19 @@ bool API_check_schema(std::string &tableName)
 
 void SQL_create_table(schema &news)
 {
+    int recordSize = 0;
+    for (auto &it : news.column)
+        recordSize += type2size(it.type);
+    if(recordSize > bufMgr.pageSize)
+    {
+        std::cout << "Error: the record size is out of range: " << bufMgr.pageSize << " bytes" << std::endl;
+        return ; 
+    }
     if (ctgMgr.addSchema(news.tableName, news.column, news.primaryKey))
         std::cout << "Error: COULD NOT CREATE TABLE" << std::endl;
     std::vector<attribute> &col = ctgMgr.getColumn(news.tableName);
     idxMgr.createEntry(ctgMgr.getFileAddr(news.tableName), col, news.primaryKey);
+    std::cout << "crt table " << news.tableName << std::endl; //测试用输出语句
 }
 
 void SQL_create_index(std::string &indexName, std::string &tableName, std::string &attrName)
@@ -86,9 +95,23 @@ void SQL_create_index(std::string &indexName, std::string &tableName, std::strin
 
 void SQL_drop_table(std::string &tableName)
 {
+    // map erase
+    int fileAddr = ctgMgr.getFileAddr(tableName);
+    std::vector<attribute> &col = ctgMgr.getColumn(tableName);
+    int sz = col.size();
+    for (int i = 0; i < sz; i++)
+    {
+        if (col[i].indexRootAddr != 0)
+        {
+            std::string indexName = ctgMgr.getIndexName(col[i].attrName);
+            ctgMgr.dropIndex(indexName);
+            idxMgr.dropEntry(col, i);
+        }
+    }
+    bufMgr.removeFile(fileAddr, tableName);
     if (ctgMgr.dropSchema(tableName))
         std::cout << "Error: COULD NOT DROP TABLE" << std::endl;
-    // !!! __ BIG PROBLEM __ 
+    // !!! __ BIG PROBLEM __
 }
 
 void SQL_drop_index(std::string &indexName)
@@ -151,24 +174,36 @@ void SQL_insert(std::string &tableName, void *data)
 {
     std::vector<attribute> &col = ctgMgr.getColumn(tableName);
     int fileAddr = ctgMgr.getFileAddr(tableName);
-    dword curAddr = rcdMgr.insertRecord(fileAddr, data, col);
     int sz = col.size();
     int curSize = 0;
-    for(int i = 0; i < sz; i++)
+    for (int i = 0; i < sz; i++)
     {
-        if(col[i].indexRootAddr != 0)
+        if (col[i].indexRootAddr != 0)
         {
             element curElement(col[i].type, (char *)data + curSize);
             dword anoAddr = idxMgr.findAddrEntry(fileAddr, col[i].indexRootAddr, curElement);
-            if(anoAddr != 0)
+            if (anoAddr != 0)
             {
-                
+                std::cout << "Error: the tuple does not satisfy the index unique restriction" << std::endl;
+                return;
             }
+        }
+        curSize += type2size(col[i].type);
+    }
+
+    dword curAddr = rcdMgr.insertRecord(fileAddr, data, col);
+    curSize = 0;
+    for (int i = 0; i < sz; i++)
+    {
+        if (col[i].indexRootAddr != 0)
+        {
+            element curElement(col[i].type, (char *)data + curSize);
             idxMgr.insertEntry(col[i], curElement, curAddr);
         }
         curSize += type2size(col[i].type);
     }
-    // int 
+
+    // int
 }
 
 void SQL_delete_all(std::string &tableName)
@@ -214,13 +249,13 @@ void API_delete_on_index(std::string &tableName, std::vector<condExpr> &conditio
     for (int i = 0; i < condsz; i++)
         curFilter.addCond(condition[i]);
     rcdMgr.getRecord(tupleAddr, curFilter);
-    if(!curFilter.res.empty())
+    if (!curFilter.res.empty())
     {
         curFilter.output(std::cout);
         idxMgr.deleteEntry(col, curFilter);
         rcdMgr.deleteRecord(tupleAddr);
     }
-    else 
+    else
     {
         std::cout << "No satisfying tuples" << std::endl;
     }

@@ -248,4 +248,9 @@ int CatalogManager::getRecordSize(std::string& tableName)
     return ctgMgr.schemas[ctgMgr.schemaIndex[tableName]].recordSize;
 }
 
+std::string CatalogManager::getIndexName(std::string &attrName)
+{
+    return ctgMgr.attrIndex[attrName];
+}
+
 CatalogManager ctgMgr;
