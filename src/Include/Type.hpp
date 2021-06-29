@@ -80,6 +80,7 @@ public:
     int addCond(const condExpr &c);
     int push(const node &in);
     int push(void *record, dword vAddr, bool delFlag = false);
+    void output(std::ostream& out);
     // inline void setKeyPos(int pos) { keyPos = pos; }
 };
 struct element

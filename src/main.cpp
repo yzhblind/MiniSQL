@@ -1,11 +1,13 @@
 #include "Interpreter.hpp"
 #include "BufferManager.hpp"
 #include "CatalogManager.hpp"
+#include <iostream>
 
 int main() {
-	inst_reader in;
 	ctgMgr.startCata();
+	inst_reader in;
 	while (in.translate() != quit) {
+		std::cout << ">";
 		in.clear();
 		in.reread();
 	}

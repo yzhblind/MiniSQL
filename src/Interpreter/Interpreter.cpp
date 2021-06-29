@@ -16,10 +16,11 @@ inst_reader::inst_reader()
 	cout << ">";
 	while ((tmp = cin.get()) != ';')
 	{
-		if (tmp == '\n')
-			cout << ">";
+		// if (tmp == '\n')
+		// 	cout << ">";
 		i.put(tmp);
 	}
+	
 	return;
 }
 
@@ -50,10 +51,11 @@ void inst_reader::reread()
 	char tmp;
 	while ((tmp = cin.get()) != ';')
 	{
-		if (tmp == '\n')
-			cout << ">";
+		// if (tmp == '\n')
+		// 	cout << ">";
 		i.put(tmp);
 	}
+	//cout << ">";
 	return;
 }
 
@@ -158,6 +160,7 @@ int get_val_type(string val)
 	for (vi = 0; vi < val.size(); vi++)
 	{
 		p = val[vi];
+
 		switch (p)
 		{
 		case '0':
@@ -215,6 +218,11 @@ int inst_reader::translate()
 			i >> str;
 			if (check_comp(str, "table"))
 				return -1;
+			else if (API_check_schema(str))
+			{
+				cout << "Error: this table has already been created before" << endl;
+				return -1;
+			}
 			else
 			{						  //检查和记录各列的名称，类型，主键
 				news.tableName = str; //表名
@@ -342,6 +350,7 @@ int inst_reader::translate()
 								cout << "Error: lack of attribute name for primary key definition" << endl;
 								return -1;
 							}
+							check = "";
 							line >> check;
 							if (check != "")
 							{
@@ -356,7 +365,10 @@ int inst_reader::translate()
 						}
 
 						if (!prmode)
+						{
+							tmp_att.indexRootAddr = 0;
 							news.column.push_back(tmp_att);
+						}
 						else
 						{
 							prmode = 0;
@@ -404,6 +416,24 @@ int inst_reader::translate()
 			if (get_name(i, attrName, "attribute", ')'))
 				return -1;
 
+			// if there is no such table
+			if (!ctgMgr.findSchema(tableName))
+			{
+				cout << "Error: no such table" << endl;
+				return -1;
+			}
+			if (!ctgMgr.findSchemaColumn(tableName, attrName))
+			{
+				cout << "Error: no such attribute" << endl;
+				return -1;
+			}
+
+			if (ctgMgr.findIndex(indexName))
+			{
+				cout << "Error: the index has already been created" << endl;
+				return -1;
+			}
+
 			SQL_create_index(indexName, tableName, attrName);
 
 			cout << "crt index " << indexName << ' ' << "on " << tableName << " (" << attrName << ')' << endl;
@@ -417,7 +447,7 @@ int inst_reader::translate()
 		i >> keywd2;
 		switch (res = trans.count(keywd2) ? trans.at(keywd2) : -1)
 		{
-		case table:		//drop table
+		case table: //drop table
 			str = "";
 			check = "";
 			i >> str;	//str此处指代tableName
@@ -429,7 +459,7 @@ int inst_reader::translate()
 			}
 			else
 			{
-				if(!ctgMgr.findSchema(str))
+				if (!ctgMgr.findSchema(str))
 				{
 					cout << "Error: such table doesn't exist" << endl;
 					return -1;
@@ -448,6 +478,12 @@ int inst_reader::translate()
 			}
 			else
 			{
+				if (!ctgMgr.findIndex(str))
+				{
+					cout << "Error: no such index" << endl;
+					return -1;
+				}
+
 				SQL_drop_index(str);
 				cout << "drop index " << str << endl;
 			}
@@ -479,6 +515,7 @@ int inst_reader::translate()
 			cout << "Error: such table does not exist" << endl;
 			return -1;
 		}
+		str = "";
 		i >> str;
 		if (str == "")
 		{
@@ -494,12 +531,14 @@ int inst_reader::translate()
 			string str_val;
 			vector<condExpr> conditions;
 			int num_cond = 0, stt = 0;
-			const std::vector<attribute> attr = ctgMgr.getColumn(tableName);
+			const std::vector<attribute> &attr = ctgMgr.getColumn(tableName);
+			str = "";
 			i >> str;
 			while (str != "")
 			{
 				if (stt == 3 && str == "and")
 				{
+					str = "";
 					i >> str;
 					stt = 0;
 				}
@@ -514,6 +553,7 @@ int inst_reader::translate()
 					{
 						attrName = str;
 						pos = ctgMgr.getColumnAddr(tableName, attrName);
+						str = "";
 						i >> str;
 						stt = 1;
 					}
@@ -528,6 +568,7 @@ int inst_reader::translate()
 					else
 					{
 						tmpOP = optrans.at(str);
+						str = "";
 						i >> str;
 						stt = 2;
 					}
@@ -546,7 +587,7 @@ int inst_reader::translate()
 					{
 						ss << str;
 						ss >> int_val;
-						if(attr[pos].type != 0)
+						if (attr[pos].type != 0)
 						{
 							cout << "Error: value types don't match" << endl;
 							return -1;
@@ -559,7 +600,7 @@ int inst_reader::translate()
 					{
 						ss << str;
 						ss >> flo_val;
-						if(attr[pos].type != 1)
+						if (attr[pos].type != 1)
 						{
 							cout << "Error: value types don't match" << endl;
 							return -1;
@@ -571,18 +612,20 @@ int inst_reader::translate()
 					default:
 					{
 						str_val = str.substr(1, str.size() - 2);
-						if(attr[pos].type <= str_val.size())
+						if (attr[pos].type <= str_val.size())
 						{
 							cout << "Error: value types don't match" << endl;
 							return -1;
 						}
-						condExpr c(attr, pos, (op)tmpOP, &str_val);
+						condExpr c(attr, pos, (op)tmpOP, str_val.c_str());
 						conditions.push_back(c);
 					}
 					}
 					ss.str("");
 					ss.clear();
 					stt = 3;
+					str = "";
+					i >> str;
 				}
 				else
 				{
@@ -643,51 +686,79 @@ int inst_reader::translate()
 				ss << tmp;
 		}
 		ss >> val;
+		void *data = malloc(ctgMgr.getRecordSize(tableName));
+		int curSize = 0;
 		while (val != "")
 		{
 			type = get_val_type(val);
+			if (type > 1)
+				type -= 2;
 			if (type == -1)
 			{
 				cout << "Error: wrong type of value" << endl;
 				return -1;
 			}
-			if (type != attr[num].type)
-			{
-				cout << "Error: given value's type is not consistent with the table's" << endl;
-				return -1;
-			}
 			switch (type)
 			{
 			case 0:
+				if (type != attr[num].type)
+				{
+					cout << "Error: given value's type is not consistent with the table's" << endl;
+					free(data);
+					return -1;
+				}
 				tr << val;
 				tr >> int_val;
-				list.push_back({type, &int_val});
+				*((int *)((char *)data + curSize)) = int_val;
 				break;
 			case 1:
+				if (type != attr[num].type)
+				{
+					cout << "Error: given value's type is not consistent with the table's" << endl;
+					free(data);
+					return -1;
+				}
 				tr << val;
 				tr >> flo_val;
-				list.push_back({type, &flo_val});
+				*((float *)((char *)data + curSize)) = flo_val;
 				break;
 			default:
-				str_val = str.substr(1, str.size() - 2);
-				list.push_back({type, &str_val});
+				if (type > attr[num].type)
+				{
+					cout << "Error: given value's type is not consistent with the table's" << endl;
+					free(data);
+					return -1;
+				}
+				str_val = val.substr(1, val.size() - 2);
+				for (int j = 0; j < attr[num].type - 1; j++)
+				{
+					if(j < str_val.size())
+						*((char *)((char *)data + curSize + j)) = str_val[j];
+					else 
+						*((char *)((char *)data + curSize + j)) = '\0';
+				}
+				*((char *)((char *)data + curSize + attr[num].type - 1)) = '\0';
 			}
+			curSize += type2size(attr[num].type);
 			tr.clear();
 			tr.str("");
 			num++;
+			val = "";
 			ss >> val;
 		}
-		if(num != attr.size())
+		if (num != attr.size())
 		{
 			cout << "Error: no enough values" << endl;
 			return -1;
 		}
-		SQL_insert(tableName, list);
+		SQL_insert(tableName, data);
+		free(data);
 		break;
 	}
 	case dlt:
 	{
 		string tableName;
+		str = "";
 		i >> str;
 		if (str != "from")
 		{
@@ -702,6 +773,7 @@ int inst_reader::translate()
 			cout << "Error: such table does not exist" << endl;
 			return -1;
 		}
+		str = "";
 		i >> str;
 		if (str == "")
 		{
@@ -717,12 +789,14 @@ int inst_reader::translate()
 			string str_val;
 			vector<condExpr> conditions;
 			int num_cond = 0, stt = 0;
-			const std::vector<attribute, std::allocator<attribute>> attr = ctgMgr.getColumn(tableName);
+			const std::vector<attribute> &attr = ctgMgr.getColumn(tableName);
+			str = "";
 			i >> str;
 			while (str != "")
 			{
 				if (stt == 3 && str == "and")
 				{
+					str = "";
 					i >> str;
 					stt = 0;
 				}
@@ -737,6 +811,7 @@ int inst_reader::translate()
 					{
 						attrName = str;
 						pos = ctgMgr.getColumnAddr(tableName, attrName);
+						str = "";
 						i >> str;
 						stt = 1;
 					}
@@ -751,6 +826,7 @@ int inst_reader::translate()
 					else
 					{
 						tmpOP = optrans.at(str);
+						str = "";
 						i >> str;
 						stt = 2;
 					}
@@ -785,12 +861,13 @@ int inst_reader::translate()
 					default:
 					{
 						str_val = str.substr(1, str.size() - 2);
-						condExpr c(attr, pos, (op)tmpOP, &str_val);
+						condExpr c(attr, pos, (op)tmpOP, str_val.c_str());
 						conditions.push_back(c);
 					}
 					}
 					ss.str("");
 					ss.clear();
+					str = "";
 					i >> str;
 				}
 				else

@@ -78,6 +78,7 @@ public:
     int replaceKey(const element &key, const element &newKey);
     // 分裂节点，返回产生的新节点，新节点中的元素大于当前节点
     bnode split(const element &key, const dword virtAddr);
+    // 均衡函数，由当前节点从src中取走一个元素
     int splice(bnode &par, bnode &src, int type);
     // 返回第一个小于父节点中应被删除索引的元素
     element merge(bnode &par, bnode &src, int type);
