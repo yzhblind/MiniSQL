@@ -16,10 +16,11 @@ inst_reader::inst_reader()
 	cout << ">";
 	while ((tmp = cin.get()) != ';')
 	{
-		if (tmp == '\n')
-			cout << ">";
+		// if (tmp == '\n')
+		// 	cout << ">";
 		i.put(tmp);
 	}
+	
 	return;
 }
 
@@ -50,10 +51,11 @@ void inst_reader::reread()
 	char tmp;
 	while ((tmp = cin.get()) != ';')
 	{
-		if (tmp == '\n')
-			cout << ">";
+		// if (tmp == '\n')
+		// 	cout << ">";
 		i.put(tmp);
 	}
+	//cout << ">";
 	return;
 }
 
@@ -529,7 +531,7 @@ int inst_reader::translate()
 			string str_val;
 			vector<condExpr> conditions;
 			int num_cond = 0, stt = 0;
-			const std::vector<attribute> attr = ctgMgr.getColumn(tableName);
+			const std::vector<attribute> &attr = ctgMgr.getColumn(tableName);
 			str = "";
 			i >> str;
 			while (str != "")
@@ -615,7 +617,7 @@ int inst_reader::translate()
 							cout << "Error: value types don't match" << endl;
 							return -1;
 						}
-						condExpr c(attr, pos, (op)tmpOP, &str_val);
+						condExpr c(attr, pos, (op)tmpOP, str_val.c_str());
 						conditions.push_back(c);
 					}
 					}
@@ -756,6 +758,7 @@ int inst_reader::translate()
 	case dlt:
 	{
 		string tableName;
+		str = "";
 		i >> str;
 		if (str != "from")
 		{
@@ -770,6 +773,7 @@ int inst_reader::translate()
 			cout << "Error: such table does not exist" << endl;
 			return -1;
 		}
+		str = "";
 		i >> str;
 		if (str == "")
 		{
@@ -785,12 +789,14 @@ int inst_reader::translate()
 			string str_val;
 			vector<condExpr> conditions;
 			int num_cond = 0, stt = 0;
-			const std::vector<attribute, std::allocator<attribute>> attr = ctgMgr.getColumn(tableName);
+			const std::vector<attribute> &attr = ctgMgr.getColumn(tableName);
+			str = "";
 			i >> str;
 			while (str != "")
 			{
 				if (stt == 3 && str == "and")
 				{
+					str = "";
 					i >> str;
 					stt = 0;
 				}
@@ -805,6 +811,7 @@ int inst_reader::translate()
 					{
 						attrName = str;
 						pos = ctgMgr.getColumnAddr(tableName, attrName);
+						str = "";
 						i >> str;
 						stt = 1;
 					}
@@ -819,6 +826,7 @@ int inst_reader::translate()
 					else
 					{
 						tmpOP = optrans.at(str);
+						str = "";
 						i >> str;
 						stt = 2;
 					}
@@ -853,12 +861,13 @@ int inst_reader::translate()
 					default:
 					{
 						str_val = str.substr(1, str.size() - 2);
-						condExpr c(attr, pos, (op)tmpOP, &str_val);
+						condExpr c(attr, pos, (op)tmpOP, str_val.c_str());
 						conditions.push_back(c);
 					}
 					}
 					ss.str("");
 					ss.clear();
+					str = "";
 					i >> str;
 				}
 				else

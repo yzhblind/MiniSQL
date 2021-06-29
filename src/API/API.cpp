@@ -151,7 +151,19 @@ void SQL_insert(std::string &tableName, void *data)
 {
     std::vector<attribute> &col = ctgMgr.getColumn(tableName);
     int fileAddr = ctgMgr.getFileAddr(tableName);
-    rcdMgr.insertRecord(fileAddr, data, col);
+    dword curAddr = rcdMgr.insertRecord(fileAddr, data, col);
+    int sz = col.size();
+    int curSize = 0;
+    for(int i = 0; i < sz; i++)
+    {
+        if(col[i].indexRootAddr != 0)
+        {
+            element curElement(col[i].type, (char *)data + curSize);
+            idxMgr.insertEntry(col[i], curElement, curAddr);
+        }
+        curSize += type2size(col[i].type);
+    }
+    // int 
 }
 
 void SQL_delete_all(std::string &tableName)
@@ -179,6 +191,7 @@ void SQL_delete_cond(std::string &tableName, std::vector<condExpr> &condition)
         }
         curFilter.addCond(condition[i]);
     }
+    idxMgr.deleteEntry(col, curFilter);
     rcdMgr.deleteRecord(ctgMgr.getFileAddr(tableName), curFilter);
     curFilter.output(std::cout);
 }
@@ -199,8 +212,8 @@ void API_delete_on_index(std::string &tableName, std::vector<condExpr> &conditio
     if(!curFilter.res.empty())
     {
         curFilter.output(std::cout);
-        rcdMgr.deleteRecord(tupleAddr);
         idxMgr.deleteEntry(col, curFilter);
+        rcdMgr.deleteRecord(tupleAddr);
     }
     else 
     {

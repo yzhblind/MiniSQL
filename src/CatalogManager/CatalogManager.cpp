@@ -135,6 +135,7 @@ int CatalogManager::endCata()
         schemaBlock.write(writeBuff, 0, BufferManager::pageSize);
         blockCNT++;
     }
+    free(writeBuff);
     return SUCCESS;
 }
 
