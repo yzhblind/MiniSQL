@@ -188,6 +188,7 @@ int BufferManager::removeFile(const hword fileAddr, const std::string filename)
             //if (buf.dirty[i] == true)
             //    writeBlock2File(i);
             buf.valid[i] = false;
+            buf.tagIndex.erase(buf.tag[i]);
             if (buf.pinned[i] > 0)
                 buf.LRU.splice(buf.LRU.end(), buf.fixed, buf.LRUIndex[i]);
             else
