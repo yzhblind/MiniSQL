@@ -159,6 +159,11 @@ void SQL_insert(std::string &tableName, void *data)
         if(col[i].indexRootAddr != 0)
         {
             element curElement(col[i].type, (char *)data + curSize);
+            dword anoAddr = idxMgr.findAddrEntry(fileAddr, col[i].indexRootAddr, curElement);
+            if(anoAddr != 0)
+            {
+                
+            }
             idxMgr.insertEntry(col[i], curElement, curAddr);
         }
         curSize += type2size(col[i].type);

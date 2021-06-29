@@ -19,6 +19,8 @@ int CatalogManager::startCata()
     readBuff = (char *)malloc(sizeof(char) * BufferManager::pageSize);
     if (readBuff == NULL)
         return FAILURE;
+    memset(readBuff, 0, sizeof(readBuff));
+    
 
     firstBlock.read(readBuff, 0, BufferManager::pageSize);
     ss.write(readBuff, BufferManager::pageSize);
@@ -88,6 +90,9 @@ int CatalogManager::endCata()
 {
     std::stringstream ss;
     char *writeBuff = (char *)malloc(sizeof(char) * BufferManager::pageSize);
+    if (writeBuff == NULL)
+        return FAILURE;
+    memset(writeBuff, 0, sizeof(writeBuff));
     int schemaNum = ctgMgr.schemas.size();
     int blockNum = bufMgr.getBlockNumber(cataFileAddr);
     node firstBlock = bufMgr.getBlock(cataFileAddr, 1);

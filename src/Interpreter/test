@@ -20,7 +20,7 @@ select * from student where sname = 'lt' and sage > 19;
 
 insert into student values ('12345678','wy',22,'M');
 
-insert into student values ('7777','ltt',22,'M');
+insert into student values ('7777','lt',22,'M');
 
 insert into student values ('8888','lt',20,'F');
 
