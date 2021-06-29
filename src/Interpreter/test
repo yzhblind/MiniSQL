@@ -8,7 +8,7 @@ create table student (
 
 create table student (
 	sno char(8), 
-	sname char(20) unique,
+	sname char(17) unique,
 	sage int,
 	sgender char (1),
 
@@ -31,7 +31,7 @@ insert into student values ('12345678','wy',22,'M');
 
 insert into student values ('7777','lt',22,'M');
 
-insert into student values ('8888','lt',20,'F');
+insert into student values ('8888','ltt',20,'F');
 
 delete from student;
 
