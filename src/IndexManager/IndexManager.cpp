@@ -199,7 +199,9 @@ bnode bnode::split(const element &key, const dword virtAddr)
     }
     else
         --*cnt;
-    memcpy(phyAddrSave, phyAddr, src + 6 + type2size(key.type));
+    // memcpy(phyAddrSave, phyAddr, src + 6 + type2size(key.type));
+    // bugfix: copy size should not be too large
+    memcpy(phyAddrSave, phyAddr, src + 6);
     phyAddr = phyAddrSave;
     base = reinterpret_cast<char *>(phyAddr);
     parent = reinterpret_cast<word *>(base + 2);
