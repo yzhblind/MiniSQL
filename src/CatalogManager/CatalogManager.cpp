@@ -19,8 +19,8 @@ int CatalogManager::startCata()
     readBuff = (char *)malloc(sizeof(char) * BufferManager::pageSize);
     if (readBuff == NULL)
         return FAILURE;
-    memset(readBuff, 0, sizeof(readBuff));
-    
+    //memset(readBuff, 0, sizeof(readBuff));
+    memset(readBuff, 0, BufferManager::pageSize);
 
     firstBlock.read(readBuff, 0, BufferManager::pageSize);
     ss.write(readBuff, BufferManager::pageSize);
@@ -243,7 +243,7 @@ std::string CatalogManager::getIndexAttrName(std::string &indexName)
     return ctgMgr.indexSchema[indexName];
 }
 
-int CatalogManager::getRecordSize(std::string& tableName)
+int CatalogManager::getRecordSize(std::string &tableName)
 {
     return ctgMgr.schemas[ctgMgr.schemaIndex[tableName]].recordSize;
 }

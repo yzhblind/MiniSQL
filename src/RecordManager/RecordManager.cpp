@@ -211,6 +211,7 @@ int RecordManager::selectRecord(hword fileAddr, filter &flt)
                 flt.push(record + 1, 0); //选择时不关心virtAddr
         }
     }
+    delete[] record;
     return SUCCESS;
 }
 int RecordManager::getRecord(dword virtAddr, filter &flt)
