@@ -1,0 +1,5 @@
+*
+!.gitignore
+!test.txt
+!clean.sh
+!insertGen.cpp
