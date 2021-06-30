@@ -109,11 +109,18 @@ int filter::push(const node &in)
 {
     char *p = new char[getSize()];
     if (in.read(p, 0, getSize()) == FAILURE)
+    {
+        delete[] p;
         return FAILURE;
+    }
     for (int i = 0; i < cond.size(); ++i)
         if (check(cond[i], p) == false)
+        {
+            delete[] p;
             return FAILURE;
+        }
     res.push_back(p);
+    delete[] p;
     return SUCCESS;
 }
 bool RecordManager::uniqueCheck(hword fileAddr, void *data, const std::vector<attribute> &origin)

@@ -92,7 +92,8 @@ int CatalogManager::endCata()
     char *writeBuff = (char *)malloc(sizeof(char) * BufferManager::pageSize);
     if (writeBuff == NULL)
         return FAILURE;
-    memset(writeBuff, 0, sizeof(writeBuff));
+    //memset(writeBuff, 0, sizeof(writeBuff));
+    memset(writeBuff, 0, BufferManager::pageSize);
     int schemaNum = ctgMgr.schemas.size();
     int blockNum = bufMgr.getBlockNumber(cataFileAddr);
     node firstBlock = bufMgr.getBlock(cataFileAddr, 1);
