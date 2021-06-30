@@ -120,7 +120,6 @@ int filter::push(const node &in)
             return FAILURE;
         }
     res.push_back(p);
-    delete[] p;
     return SUCCESS;
 }
 bool RecordManager::uniqueCheck(hword fileAddr, void *data, const std::vector<attribute> &origin)
