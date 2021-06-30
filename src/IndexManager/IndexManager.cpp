@@ -1,10 +1,12 @@
 #include "IndexManager.hpp"
 #include "Type.hpp"
 #include <cstring>
+#include <cassert>
 //判断元素a所指向的元素是否小于b所指向的元素
 //不进行类型检查，类型解释依赖元素a
 bool operator<(const element &a, const element &b)
 {
+    assert(a.type == b.type);
     switch (a.type)
     {
     case 0:
@@ -22,6 +24,7 @@ bool operator<(const element &a, const element &b)
 //不进行类型检查，类型解释依赖元素a
 bool operator<=(const element &a, const element &b)
 {
+    assert(a.type == b.type);
     switch (a.type)
     {
     case 0:
@@ -39,6 +42,7 @@ bool operator<=(const element &a, const element &b)
 //不进行类型检查，类型解释依赖元素a
 bool operator==(const element &a, const element &b)
 {
+    assert(a.type == b.type);
     switch (a.type)
     {
     case 0:
@@ -238,7 +242,7 @@ bnode bnode::split(const element &key, const dword virtAddr)
 int bnode::splice(bnode &par, bnode &src, int type)
 {
     // bnode par(origin.getBlock(getFileAddr(), *parent));
-    
+
     // 本函数对涉及到3个节点，均会发生修改，需全部设为dirty
     origin.setDirty(getFileAddr(), getBlockAddr());
     src.origin.setDirty(src.getFileAddr(), src.getBlockAddr());
@@ -339,6 +343,8 @@ dword IndexManager::findAddrEntry(const hword dataFileAddr, const word rootAddr,
 {
     word leafAddr = find(rootAddr, 0, keyValue);
     bnode leaf(bufMgr.getBlock(indexFileAddr, leafAddr));
+    if (leaf.getCnt() == 0)
+        return 0;
     dword res = leaf.find(keyValue, PTR_DATA, true);
     return res > 0 ? combileVirtAddr(dataFileAddr, extractBlockAddr(res), extractOffset(res)) : 0;
 }
