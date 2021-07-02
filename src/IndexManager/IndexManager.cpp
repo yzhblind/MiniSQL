@@ -2,6 +2,7 @@
 #include "Type.hpp"
 #include <cstring>
 #include <cassert>
+#include <iostream>
 //判断元素a所指向的元素是否小于b所指向的元素
 //不进行类型检查，类型解释依赖元素a
 bool operator<(const element &a, const element &b)
@@ -177,12 +178,13 @@ int bnode::replaceKey(const element &key, const element &newKey)
     if (idx != getCnt())
     {
         element t = getElement(idx, key.type);
-        if (key == t)
-        {
-            origin.setDirty(getFileAddr(), getBlockAddr());
-            t.cpy(newKey);
-            return idx;
-        }
+        // bugfix:不再要求等于，因为删除后B+树内部节点key可能不在叶节点中
+        //if (key == t)
+        //{
+        origin.setDirty(getFileAddr(), getBlockAddr());
+        t.cpy(newKey);
+        return idx;
+        //}
     }
     return FAILURE;
 }
@@ -251,17 +253,17 @@ int bnode::splice(bnode &par, bnode &src, int type)
     if (src.getElement(0, type) <= getElement(0, type))
     {
         // src节点为左兄弟
-        // 最后一个元素左指针的偏移量
-        int lastKey = index2offset(src.getCnt() - 1, type);
+        // 最后一个元素左指针的偏移量(bug)
+        int lastKey = index2offset(src.getCnt() - (getBase() == 0 ? 1 : 0), type);
         // 获取src中最大的元素
         element key = src.getElement(src.getCnt() - 1, type);
-        // 最大元素的左指针指向的地址
+        // 最大元素的左指针指向的地址(bug)
         dword virtAddr = combileVirtAddr(0, *reinterpret_cast<word *>(src.base + lastKey), *reinterpret_cast<hword *>(src.base + lastKey + 4));
         if (*base == 0)
         {
             // 叶节点
-            element oldKey = getElement(0, type);
-            par.replaceKey(oldKey, key);
+            //element oldKey = getElement(0, type);
+            par.replaceKey(key, key);
             insertKey(key, virtAddr);
             src.move(*src.cnt, -1, type);
         }
@@ -283,7 +285,7 @@ int bnode::splice(bnode &par, bnode &src, int type)
             // int secondKey = index2offset(1, type);
             element oldKey = src.getElement(0, type);
             element key = src.getElement(1, type);
-            par.replaceKey(oldKey, key);
+            par.replaceKey(getElement(getCnt() - 1, type), key);
             insertKey(oldKey, virtAddr);
             src.move(1, -1, type);
         }
@@ -294,7 +296,7 @@ int bnode::splice(bnode &par, bnode &src, int type)
             int idx = par.binarySearch(pKey);
             element parKey = par.getElement(idx, type);
             element key = src.getElement(0, type);
-            insertKey(parKey, virtAddr);
+            insertKey(parKey, virtAddr, DATA_PTR);
             parKey.cpy(key);
             src.move(1, -1, type);
         }
@@ -403,6 +405,8 @@ word IndexManager::erase(bnode &cur, const element &keyValue, const packing delT
     cur.deleteKey(keyValue, delType);
     if (*(cur.base + 1) == 1)
     {
+        // static int cnt = 0;
+        // std::cout << "erase root " << ++cnt << " time; root still has " << cur.getCnt() << " key" << std::endl;
         if (cur.getCnt() == 0)
         {
             word t = *reinterpret_cast<word *>(cur.base + cur.index2offset(0, type));
@@ -447,8 +451,10 @@ int IndexManager::deleteEntry(std::vector<attribute> &col, const filter &flt)
             keyStart += type2size(attr.type);
             continue;
         }
+        // int i = 0;
         for (auto record : flt.res)
         {
+            // std::cout << ++i << std::endl;
             element key(attr.type, static_cast<char *>(record) + keyStart);
             word leafAddr = find(attr.indexRootAddr, 0, key);
             bnode leaf(bufMgr.getBlock(indexFileAddr, leafAddr));
