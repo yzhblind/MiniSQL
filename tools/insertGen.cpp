@@ -7,7 +7,7 @@
 
 using namespace std;
 
-const int record_num = 1000;
+const int record_num = 1000000;
 const int attr_num = 4;
 const vector<int> type = {9, 17, 0, 2};
 const vector<bool> str_int = {true, false, false, false};

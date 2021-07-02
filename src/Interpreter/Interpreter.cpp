@@ -920,6 +920,7 @@ int inst_reader::translate()
 				m.i.str("");
 				m.reread(1);
 			}
+			cout << "File has been executed." << endl;
 			cin.rdbuf(oldcin); // 恢复键盘输入
 			fin.close();
 		}

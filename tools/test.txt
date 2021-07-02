@@ -25,7 +25,7 @@ select * from student where sno = '88888888';
 select * from student where sno = '12345678';
 select * from student where sage > 20 and sgender = 'M';
 select * from student where sname = 'wy';
-select * from student where sname = 'lt' and sage > 19;
+select * from student where sage > 19;
 
 
 insert into student values ('12345678','wy',22,'M');
