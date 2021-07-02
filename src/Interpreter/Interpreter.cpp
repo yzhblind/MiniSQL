@@ -908,15 +908,18 @@ int inst_reader::translate()
 			oldcin = cin.rdbuf(fin.rdbuf());
 			inst_reader m(1);
 			int ress;
+			res = exec;
 			while ((ress = m.translate()) != -1 && m.i.str() != "" && !fin.eof())
 			{
 				if(ress == quit)
+				{
+					res = quit;
 					break;
+				}
 				m.clear();
 				m.i.str("");
 				m.reread(1);
 			}
-			res = exec;
 			cin.rdbuf(oldcin); // 恢复键盘输入
 			fin.close();
 		}
