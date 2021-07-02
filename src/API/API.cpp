@@ -211,8 +211,8 @@ void SQL_delete_all(std::string &tableName)
     std::vector<attribute> &col = ctgMgr.getColumn(tableName);
     filter curFilter(col);
     int fileAddr = ctgMgr.getFileAddr(tableName);
-    idxMgr.deleteEntry(col, curFilter);
     rcdMgr.deleteRecord(fileAddr, curFilter);
+    idxMgr.deleteEntry(col, curFilter);
     curFilter.output(std::cout);
 }
 
@@ -231,8 +231,8 @@ void SQL_delete_cond(std::string &tableName, std::vector<condExpr> &condition)
         }
         curFilter.addCond(condition[i]);
     }
-    idxMgr.deleteEntry(col, curFilter);
     rcdMgr.deleteRecord(ctgMgr.getFileAddr(tableName), curFilter);
+    idxMgr.deleteEntry(col, curFilter);
     curFilter.output(std::cout);
 }
 
