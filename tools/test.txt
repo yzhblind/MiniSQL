@@ -28,6 +28,12 @@ select * from student where sname = 'wy';
 select * from student where sage > 19;
 
 
+select * from student where sage >= 20 and sgender = 'e';
+
+delete from student where sage <= 30 and sgender = 'm';
+
+
+
 insert into student values ('12345678','wy',22,'M');
 insert into student values ('7777','lt',22,'M');
 insert into student values ('8888','ltt',20,'F');
@@ -36,4 +42,17 @@ delete from student;
 
 delete from student where sname = 'lt';
 
-delete from student where sage > 20;
+delete from student where sage >= 56;
+
+delete from student where sgender = 'M' and sage > 20;
+
+create table testfloat (
+	grade float,
+	primary key (grade)
+);
+
+insert into testfloat values (12.345);
+
+insert into testfloat values (3.141592);
+
+insert into testfloat values (234.29);
