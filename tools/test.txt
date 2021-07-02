@@ -56,3 +56,5 @@ insert into testfloat values (12.345);
 insert into testfloat values (3.141592);
 
 insert into testfloat values (234.29);
+
+select * from testfloat where grade = 3.141592;
