@@ -19,8 +19,8 @@ int CatalogManager::startCata()
     readBuff = (char *)malloc(sizeof(char) * BufferManager::pageSize);
     if (readBuff == NULL)
         return FAILURE;
-    memset(readBuff, 0, sizeof(readBuff));
-    
+    //memset(readBuff, 0, sizeof(readBuff));
+    memset(readBuff, 0, BufferManager::pageSize);
 
     firstBlock.read(readBuff, 0, BufferManager::pageSize);
     ss.write(readBuff, BufferManager::pageSize);
@@ -92,7 +92,8 @@ int CatalogManager::endCata()
     char *writeBuff = (char *)malloc(sizeof(char) * BufferManager::pageSize);
     if (writeBuff == NULL)
         return FAILURE;
-    memset(writeBuff, 0, sizeof(writeBuff));
+    //memset(writeBuff, 0, sizeof(writeBuff));
+    memset(writeBuff, 0, BufferManager::pageSize);
     int schemaNum = ctgMgr.schemas.size();
     int blockNum = bufMgr.getBlockNumber(cataFileAddr);
     node firstBlock = bufMgr.getBlock(cataFileAddr, 1);
@@ -243,7 +244,7 @@ std::string CatalogManager::getIndexAttrName(std::string &indexName)
     return ctgMgr.indexSchema[indexName];
 }
 
-int CatalogManager::getRecordSize(std::string& tableName)
+int CatalogManager::getRecordSize(std::string &tableName)
 {
     return ctgMgr.schemas[ctgMgr.schemaIndex[tableName]].recordSize;
 }

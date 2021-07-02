@@ -1,5 +1,5 @@
 #!/bin/bash
-cd build
+cd ../build
 rm CATALOG
 rm INDEX
 rm student

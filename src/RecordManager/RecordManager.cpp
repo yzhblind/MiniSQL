@@ -109,10 +109,16 @@ int filter::push(const node &in)
 {
     char *p = new char[getSize()];
     if (in.read(p, 0, getSize()) == FAILURE)
+    {
+        delete[] p;
         return FAILURE;
+    }
     for (int i = 0; i < cond.size(); ++i)
         if (check(cond[i], p) == false)
+        {
+            delete[] p;
             return FAILURE;
+        }
     res.push_back(p);
     return SUCCESS;
 }
@@ -211,6 +217,7 @@ int RecordManager::selectRecord(hword fileAddr, filter &flt)
                 flt.push(record + 1, 0); //选择时不关心virtAddr
         }
     }
+    delete[] record;
     return SUCCESS;
 }
 int RecordManager::getRecord(dword virtAddr, filter &flt)
