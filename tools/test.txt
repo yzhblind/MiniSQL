@@ -6,6 +6,8 @@ create table student (
 	primary key (sno)
 );
 
+execfile ../tools/out.txt;
+
 create table student (
 	sno char(8), 
 	sname char(17) unique,

@@ -62,7 +62,7 @@ void inst_reader::reread()
 void inst_reader::reread(int mode)
 {
 	char tmp;
-	while ((tmp = cin.get()) != ';')
+	while ((tmp = cin.get()) != ';' && !cin.eof())
 	{
 		//if (tmp == '\n')cout << ">";
 		i.put(tmp);
@@ -204,7 +204,10 @@ int inst_reader::translate()
 {
 	string keywd1, keywd2, str, check;
 	int res;
+	keywd1 = "";
 	i >> keywd1;
+	if(keywd1 == "")
+		return -1;
 	switch (res = trans.count(keywd1) ? trans.at(keywd1) : -1)
 	{ //根据第一个关键词分类
 	case creat:
@@ -904,12 +907,16 @@ int inst_reader::translate()
 			//用 rdbuf() 重新定向，返回旧输入流缓冲区指针
 			oldcin = cin.rdbuf(fin.rdbuf());
 			inst_reader m(1);
-			while (m.translate() != quit || m.i.str() == "")
+			int ress;
+			while ((ress = m.translate()) != -1 && m.i.str() != "" && !fin.eof())
 			{
+				if(ress == quit)
+					break;
 				m.clear();
+				m.i.str("");
 				m.reread(1);
 			}
-			res = quit;
+			res = exec;
 			cin.rdbuf(oldcin); // 恢复键盘输入
 			fin.close();
 		}

@@ -6,7 +6,8 @@
 int main() {
 	ctgMgr.startCata();
 	inst_reader in;
-	while (in.translate() != quit) {
+	int res;
+	while ((res = in.translate()) != quit) {
 		std::cout << ">";
 		in.clear();
 		in.reread();
